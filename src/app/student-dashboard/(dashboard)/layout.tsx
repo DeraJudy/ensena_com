@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 import { AccountStatusBanner } from "@/components/shared/account-status-banner";
+import { ThemeSync } from "@/components/shared/theme-sync";
+import { getAccountSettings, type ThemePreference } from "@/lib/account-settings";
 import { StudentBottomNav } from "@/components/student-dashboard/student-bottom-nav";
 import { StudentIdentityProvider, type StudentIdentityRow } from "@/components/student-dashboard/student-identity";
 import { StudentMobileTopbar } from "@/components/student-dashboard/student-mobile-topbar";
@@ -19,13 +21,18 @@ export default async function StudentDashboardLayout({ children }: { children: R
   const profile = await requireRole("student");
 
   let identity: StudentIdentityRow | null = null;
+  let accountTheme: ThemePreference | null = null;
   if (profile) {
     const supabase = await getSupabaseServerClient();
-    const [{ data: contact }, { data: student }, { data: guardian }] = await Promise.all([
+    const [{ data: contact }, { data: student }, { data: guardian }, settings] = await Promise.all([
       supabase.from("profiles").select("phone, date_of_birth").eq("id", profile.id).maybeSingle(),
-      supabase.from("student_profiles").select("phone, date_of_birth, learning_for, academic_level, academic_detail, course, subjects, goal").eq("id", profile.id).maybeSingle(),
+      // "*" so newer columns (bio, support_types, learning_goals) are picked
+      // up when present without breaking before the migration has run.
+      supabase.from("student_profiles").select("*").eq("id", profile.id).maybeSingle(),
       supabase.from("student_guardians").select("full_name, relationship, email, phone, consent_status").eq("student_id", profile.id).maybeSingle(),
+      getAccountSettings(profile.id),
     ]);
+    accountTheme = settings.saved ? settings.theme : null;
     identity = {
       id: profile.id,
       fullName: profile.fullName,
@@ -39,6 +46,9 @@ export default async function StudentDashboardLayout({ children }: { children: R
       course: student?.course ?? null,
       subjects: student?.subjects ?? null,
       goal: student?.goal ?? null,
+      bio: (student?.bio as string | null | undefined) ?? null,
+      supportTypes: (student?.support_types as string[] | null | undefined) ?? null,
+      learningGoals: (student?.learning_goals as string[] | null | undefined) ?? null,
       guardian: guardian
         ? {
             fullName: guardian.full_name,
@@ -55,6 +65,7 @@ export default async function StudentDashboardLayout({ children }: { children: R
 
   return (
     <StudentIdentityProvider row={identity}>
+      <ThemeSync accountTheme={accountTheme} />
       <div className="flex min-h-screen flex-col bg-ensena-bg-soft lg:flex-row">
         <StudentSidebar />
         <StudentMobileTopbar />

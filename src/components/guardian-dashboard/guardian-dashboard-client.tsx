@@ -203,7 +203,9 @@ export function GuardianDashboardClient() {
           )}
 
           <Card title="Learning Plan" icon={<Target className="size-4 text-ensena-primary" />}>
-            {real ? (
+            {real && !child.progressShared ? (
+              <EmptyNote>{child.firstName} has chosen not to share their learning plan and progress. They can turn this on under Settings → Privacy.</EmptyNote>
+            ) : real ? (
               <>
                 <p className="mt-3 text-xs text-ensena-muted">Goal</p>
                 <p className="text-sm font-semibold text-ensena-ink">{child.goal || <span className="font-normal text-ensena-muted">{child.firstName} hasn&apos;t set a goal yet.</span>}</p>
@@ -303,7 +305,9 @@ export function GuardianDashboardClient() {
             icon={<GraduationCap className="size-4 text-ensena-primary" />}
             action={!real && <button type="button" onClick={() => flash("A detailed guardian progress report isn't available yet.")} className="text-xs font-semibold text-ensena-primary hover:underline">View full report</button>}
           >
-            {real ? (
+            {real && !child.progressShared ? (
+              <EmptyNote>{child.firstName} has chosen not to share their progress.</EmptyNote>
+            ) : real ? (
               <EmptyNote>Progress will appear after {child.firstName}&apos;s first completed lessons.</EmptyNote>
             ) : (
               <div className="mt-4 flex items-center gap-4">

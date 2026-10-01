@@ -2,20 +2,41 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, HeartHandshake, Mail, Phone } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, HeartHandshake, Mail, Phone } from "lucide-react";
 
 import { useStudentIdentity } from "@/components/student-dashboard/student-identity";
 import { resendGuardianConsent } from "@/lib/actions/auth";
+import { ageOn } from "@/lib/age";
+import { guardianRequirement, guardianRequirementMessage } from "@/lib/guardian-requirement";
 import { cn } from "@/lib/utils";
 
 // Shown on the student dashboard for "My child" sign-ups — the parent or
 // guardian saved at sign-up (student_guardians) and whether they've
 // confirmed consent from their email yet.
 export function GuardianDetailsCard({ className }: { className?: string }) {
-  const { guardian } = useStudentIdentity();
+  const me = useStudentIdentity();
+  const { guardian } = me;
   const [resending, setResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
-  if (!guardian) return null;
+
+  if (!guardian) {
+    // No guardian yet: prompt when the age/level rules require or recommend one.
+    const requirement = me.id ? guardianRequirement(me.dob, me.academicLevel) : "optional";
+    if (requirement === "optional") return null;
+    const required = requirement === "required";
+    return (
+      <div className={cn("flex flex-wrap items-center gap-3 rounded-2xl border p-4 text-sm", required ? "border-rose-200 bg-rose-50 text-rose-800" : "border-amber-200 bg-amber-50 text-amber-900", className)}>
+        {required ? <AlertTriangle className="size-5 shrink-0" /> : <HeartHandshake className="size-5 shrink-0" />}
+        <span className="min-w-[200px] flex-1">
+          <strong>{required ? "Add a parent or guardian" : "Consider adding a parent or guardian"}</strong>
+          <span className="block">{guardianRequirementMessage(requirement, ageOn(me.dob))}</span>
+        </span>
+        <Link href="/student-dashboard/profile#guardian" className={cn("rounded-full px-4 py-2 text-xs font-semibold text-white", required ? "bg-rose-600 hover:bg-rose-700" : "bg-amber-500 hover:bg-amber-600")}>
+          {required ? "Add now" : "Add parent/guardian"}
+        </Link>
+      </div>
+    );
+  }
 
   async function resend() {
     setResending(true);

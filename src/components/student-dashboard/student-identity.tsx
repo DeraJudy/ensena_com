@@ -34,6 +34,10 @@ export interface StudentIdentity {
   learningFor: string;
   subjects: string[];
   goal: string;
+  bio: string;
+  /** "What do you usually need help with?" (academic-support-types ids). */
+  supportTypes: string[];
+  learningGoals: string[];
   tier: string;
   /** Parent/guardian for "My child" sign-ups (student_guardians). */
   guardian: StudentGuardian | null;
@@ -52,6 +56,9 @@ export interface StudentIdentityRow {
   course: string | null;
   subjects: string[] | null;
   goal: string | null;
+  bio: string | null;
+  supportTypes: string[] | null;
+  learningGoals: string[] | null;
   guardian: StudentGuardian | null;
 }
 
@@ -70,6 +77,9 @@ const demoIdentity: StudentIdentity = {
   learningFor: "Myself",
   subjects: studentProfileDetail.subjects,
   goal: studentProfileDetail.learningGoals[0] ?? "",
+  bio: studentProfileDetail.bio,
+  supportTypes: studentProfileDetail.supportPreferences,
+  learningGoals: studentProfileDetail.learningGoals,
   tier: dashboardStudent.tier,
   guardian: null,
 };
@@ -91,6 +101,10 @@ function toIdentity(row: StudentIdentityRow): StudentIdentity {
     learningFor: row.learningFor ?? "",
     subjects: row.subjects ?? [],
     goal: row.goal ?? "",
+    bio: row.bio ?? "",
+    supportTypes: row.supportTypes ?? [],
+    // Fall back to the single onboarding goal until learning_goals exists/is filled.
+    learningGoals: row.learningGoals?.length ? row.learningGoals : (row.goal ?? "").split("\n").filter(Boolean),
     tier: "Student",
     guardian: row.guardian,
   };

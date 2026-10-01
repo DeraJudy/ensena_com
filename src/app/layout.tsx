@@ -3,6 +3,8 @@ import { Inter, Poppins } from "next/font/google";
 
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { RouteProgressBar } from "@/components/shared/route-progress-bar";
+import { ThemeSync } from "@/components/shared/theme-sync";
+import { themeInitScript } from "@/lib/theme";
 import { Toaster } from "@/components/ui/toaster";
 
 import "./globals.css";
@@ -71,8 +73,14 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${poppins.variable} scroll-smooth`}
+      // The theme script below may add `dark` before React hydrates.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-screen bg-white font-sans text-ensena-ink antialiased">
+        <ThemeSync />
         <RouteProgressBar />
         <PageViewTracker />
         {children}

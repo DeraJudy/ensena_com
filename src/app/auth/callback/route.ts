@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType, User } from "@supabase/supabase-js";
 
+import { recordSignIn } from "@/lib/account-settings";
 import { getSupabaseServerClient as getSupabaseServiceRoleClient } from "@/lib/supabase";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { dashboardHrefByRole, type AppRole } from "@/lib/supabase/require-role";
@@ -107,6 +108,10 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.redirect(`${origin}/sign-up/complete-profile`);
   }
+
+  // Fully registered Google sign-in: remember this browser and send a Login
+  // Alert if it's a new device.
+  await recordSignIn(user.id, role);
 
   return NextResponse.redirect(`${origin}${redirectTo || dashboardHrefByRole[role] || "/"}`);
 }

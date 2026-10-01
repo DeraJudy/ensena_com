@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { recordSignIn } from "@/lib/account-settings";
 import { getSupabaseServerClient as getSupabaseServiceRoleClient } from "@/lib/supabase";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { dashboardHrefByRole, type AppRole } from "@/lib/supabase/require-role";
@@ -50,6 +51,9 @@ export async function signInWithSupabase(email: string, password: string, redire
       return { status: "error", message: "Your Platform User access has been suspended. Contact your Super Admin." };
     }
   }
+
+  // Remembers this browser and sends a Login Alert if it's a new device.
+  await recordSignIn(data.user.id, role);
 
   redirect(safeRedirectPath(redirectTo) || dashboardHrefByRole[role] || "/");
 }

@@ -29,7 +29,9 @@ export default async function GuardianDashboardLayout({ children }: { children: 
     const [{ data: studentProfiles }, { data: learning }] = studentIds.length
       ? await Promise.all([
           supabase.from("profiles").select("id, full_name, email, phone, date_of_birth, avatar_url").in("id", studentIds),
-          supabase.from("student_profiles").select("id, phone, date_of_birth, learning_for, academic_level, academic_detail, course, subjects, goal").in("id", studentIds),
+          // "*" so share_progress_with_guardian is picked up once migration
+          // 0016 has run (and nothing breaks before then).
+          supabase.from("student_profiles").select("*").in("id", studentIds),
         ])
       : [{ data: [] }, { data: [] }];
 
@@ -38,6 +40,9 @@ export default async function GuardianDashboardLayout({ children }: { children: 
       if (!p) return [];
       const sp = learning?.find((x) => x.id === link.student_id);
       const name = p.full_name?.trim() || p.email;
+      // The student's "Share Progress with Parent" setting: when off, their
+      // learning plan and progress never leave the server.
+      const shared = sp?.share_progress_with_guardian !== false;
       return [
         {
           id: p.id,
@@ -51,8 +56,9 @@ export default async function GuardianDashboardLayout({ children }: { children: 
           academicLevel: sp?.academic_level ?? "",
           academicDetail: sp?.academic_detail ?? "",
           course: sp?.course ?? "",
-          subjects: sp?.subjects ?? [],
-          goal: sp?.goal ?? "",
+          subjects: shared ? (sp?.subjects ?? []) : [],
+          goal: shared ? (sp?.goal ?? "") : "",
+          progressShared: shared,
           relationship: link.relationship,
           consentStatus: link.consent_status === "confirmed" ? "confirmed" : "pending",
           consentedAt: link.consented_at,

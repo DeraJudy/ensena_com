@@ -8,6 +8,8 @@
 // synchronously because no real async provider exists yet, structured so a
 // future real provider adapter only needs to replace `deliver()` below.
 import { renderEmail, type BookingEmailVars, type EmailTemplateId } from "@/lib/email-templates";
+import { notifyMyBookingConfirmed } from "@/lib/actions/notifications";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export type EmailDeliveryStatus = "sent" | "failed";
 
@@ -77,6 +79,21 @@ export function sendBookingEmail(input: {
     sentAtMs: Date.now(),
   };
   writeJson([log, ...readRaw()]);
+
+  // Real delivery: a booking confirmation goes to the signed-in student who
+  // just booked — by email (Resend, noreply@ensena.co) and/or push, per their
+  // notification settings. Other templates are addressed to the other party
+  // and stay local until those flows move to the database.
+  if (input.template === "booking_confirmed" && typeof window !== "undefined" && isSupabaseConfigured()) {
+    void notifyMyBookingConfirmed({
+      tutorName: input.vars.otherPartyName ?? "your tutor",
+      subject: input.vars.subject ?? "lesson",
+      date: input.vars.date ?? "",
+      time: input.vars.time ?? "",
+      reference: input.vars.bookingReference,
+      url: input.vars.bookingUrl,
+    }).catch(() => undefined);
+  }
   return log;
 }
 

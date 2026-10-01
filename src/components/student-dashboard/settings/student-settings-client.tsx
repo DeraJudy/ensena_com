@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentType, useState } from "react";
+import { type ComponentType, useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -18,6 +18,12 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { toast } from "sonner";
+import { sendTestNotification, updateMyAccount, updateMyNotificationPreferences } from "@/lib/actions/notifications";
+import type { NotificationPreferences } from "@/lib/notifications";
+import { currentPushSubscription, disablePush, enablePush, pushSupport } from "@/lib/push-client";
+import { changeMyPassword, disableMyCalendarFeed, getMyCalendarFeed, updateMyLoginAlerts, updateMyPrivacy, updateMyTheme } from "@/lib/actions/account-settings";
+import { applyTheme, readThemeCookie, writeThemeCookie, type ThemePreference } from "@/lib/theme";
 import { saveStudentIdentity, useStudentIdentity } from "@/components/student-dashboard/student-identity";
 import { dashboardStudent, studentProfileDetail } from "@/lib/student-dashboard-data";
 import { cn } from "@/lib/utils";
@@ -75,7 +81,31 @@ type MobileGroup = {
   rows: MobileRow[];
 };
 
-export function StudentSettingsClient() {
+export interface StudentAccountSettings {
+  profilePublic: boolean;
+  shareProgressWithGuardian: boolean;
+  loginAlerts: boolean;
+  /** null = never saved to the account; fall back to this browser's choice. */
+  theme: ThemePreference | null;
+  calendarToken: string | null;
+  /** false for Google-only accounts (they can add a first password). */
+  hasPassword: boolean;
+}
+
+const themeLabels: { value: ThemePreference; label: string; hint: string }[] = [
+  { value: "light", label: "Light", hint: "Always light" },
+  { value: "dark", label: "Dark", hint: "Always dark" },
+  { value: "system", label: "System", hint: "Match your device" },
+];
+
+const noopSubscribe = () => () => {};
+
+// initialPrefs / initialSettings: the signed-in user's saved settings (null
+// in demo mode, where everything stays local).
+export function StudentSettingsClient({
+  initialPrefs = null,
+  initialSettings = null,
+}: { initialPrefs?: NotificationPreferences | null; initialSettings?: StudentAccountSettings | null } = {}) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [tab, setTab] = useState<Tab>(() => resolveTab(tabParam));
@@ -97,17 +127,44 @@ export function StudentSettingsClient() {
   const router = useRouter();
   const me = useStudentIdentity();
   const [email, setEmail] = useState(me.email);
+  const [fullName, setFullName] = useState(me.name);
   const [phone, setPhone] = useState(me.phone);
-  const [accountSaved, setAccountSaved] = useState(false);
+  const [confirmAccountOpen, setConfirmAccountOpen] = useState(false);
+  const [savingAccount, setSavingAccount] = useState(false);
+  const accountChanged = fullName.trim() !== me.name || phone.trim() !== me.phone;
 
-  async function saveAccount() {
-    const { ok } = await saveStudentIdentity(me.id, { profile: { phone: phone.trim() || null }, student: { phone: phone.trim() || null } });
-    if (!ok) return;
-    if (me.id) router.refresh();
-    dashboardStudent.email = email;
-    dashboardStudent.phone = phone;
-    setAccountSaved(true);
-    setTimeout(() => setAccountSaved(false), 2000);
+  // Real accounts: confirm first, then save to the database and refresh so
+  // the new name/phone shows everywhere. Demo: local only.
+  function requestSaveAccount() {
+    if (!me.id) {
+      dashboardStudent.name = fullName;
+      dashboardStudent.email = email;
+      dashboardStudent.phone = phone;
+      toast.success("Saved (demo mode).");
+      return;
+    }
+    if (!accountChanged) {
+      toast("Nothing to save — your details haven't changed.");
+      return;
+    }
+    if (fullName.trim().length < 2) {
+      toast.error("Please enter your full name.");
+      return;
+    }
+    setConfirmAccountOpen(true);
+  }
+
+  async function confirmSaveAccount() {
+    setSavingAccount(true);
+    const result = await updateMyAccount({ fullName, phone });
+    setSavingAccount(false);
+    setConfirmAccountOpen(false);
+    if (!result.ok) {
+      toast.error(result.message ?? "We couldn't save your details.");
+      return;
+    }
+    toast.success("Your details have been updated.");
+    router.refresh();
   }
 
   const [dob, setDob] = useState(me.dob);
@@ -133,30 +190,218 @@ export function StudentSettingsClient() {
     setTimeout(() => setPersonalSaved(false), 2000);
   }
 
-  const [emailNotifs, setEmailNotifs] = useState(true);
+  const [emailNotifs, setEmailNotifs] = useState(initialPrefs?.email ?? true);
   const [smsNotifs, setSmsNotifs] = useState(false);
-  const [pushNotifs, setPushNotifs] = useState(true);
+  const [pushNotifs, setPushNotifs] = useState(initialPrefs?.push ?? false);
+  const [savingPref, setSavingPref] = useState<"email" | "push" | null>(null);
+  // iPhone/iPad Safari only supports push once Ensena is on the Home Screen.
+  const pushNeedsInstall = useSyncExternalStore(() => () => {}, () => pushSupport() === "needs-install", () => false);
+  const [testing, setTesting] = useState<"email" | "push" | null>(null);
 
-  const [profilePublic, setProfilePublic] = useState(false);
-  const [shareProgressWithParent, setShareProgressWithParent] = useState(true);
+  // Push is per device: if it's on for the account but this browser has no
+  // subscription, show it as off here.
+  useEffect(() => {
+    if (!me.id || !initialPrefs?.push) return;
+    let cancelled = false;
+    currentPushSubscription()
+      .then((sub) => {
+        if (!cancelled && !sub) setPushNotifs(false);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [me.id, initialPrefs?.push]);
 
+  async function changeEmailNotifs(on: boolean) {
+    setEmailNotifs(on);
+    if (!me.id) return;
+    setSavingPref("email");
+    const result = await updateMyNotificationPreferences({ email: on });
+    setSavingPref(null);
+    if (!result.ok) {
+      setEmailNotifs(!on);
+      toast.error(result.message ?? "Couldn't update email notifications.");
+      return;
+    }
+    toast.success(on ? "Email notifications on — booking confirmations, homework and reminders will be emailed to you." : "Email notifications off.");
+  }
+
+  async function changePushNotifs(on: boolean) {
+    if (!me.id) {
+      setPushNotifs(on);
+      return;
+    }
+    setSavingPref("push");
+    const result = on ? await enablePush() : await disablePush();
+    setSavingPref(null);
+    if (!result.ok) {
+      toast.error(result.message ?? "Couldn't update push notifications.");
+      return;
+    }
+    setPushNotifs(on);
+    toast.success(on ? "Push notifications on for this device." : "Push notifications off for this device.");
+  }
+
+  async function sendTest(channel: "email" | "push") {
+    setTesting(channel);
+    const result = await sendTestNotification(channel);
+    setTesting(null);
+    if (result.ok) toast.success(result.message ?? "Sent.");
+    else toast.error(result.message ?? "Couldn't send the test.");
+  }
+
+  // --- Privacy ---
+  const [profilePublic, setProfilePublic] = useState(initialSettings?.profilePublic ?? false);
+  const [shareProgressWithParent, setShareProgressWithParent] = useState(initialSettings?.shareProgressWithGuardian ?? true);
+  const [savingPrivacy, setSavingPrivacy] = useState<"public" | "share" | null>(null);
+
+  async function changePrivacy(key: "public" | "share", on: boolean) {
+    const set = key === "public" ? setProfilePublic : setShareProgressWithParent;
+    set(on);
+    if (!me.id) return;
+    setSavingPrivacy(key);
+    const result = await updateMyPrivacy(key === "public" ? { profilePublic: on } : { shareProgressWithGuardian: on });
+    setSavingPrivacy(null);
+    if (!result.ok) {
+      set(!on);
+      toast.error(result.message ?? "Couldn't save your privacy settings.");
+      return;
+    }
+    if (key === "public") {
+      toast.success(on ? "Your profile is now public — tutors can view it before you book." : "Your profile is now private — only tutors you've booked can see it.");
+    } else {
+      toast.success(on ? "Your parent/guardian can now see your learning plan and progress." : "Your progress is now hidden from your parent/guardian.");
+    }
+  }
+
+  // --- Security ---
   const [twoFactor, setTwoFactor] = useState(false);
-  const [loginAlerts, setLoginAlerts] = useState(true);
+  const [loginAlerts, setLoginAlerts] = useState(initialSettings?.loginAlerts ?? true);
+  const [savingLoginAlerts, setSavingLoginAlerts] = useState(false);
+  const hasPassword = initialSettings?.hasPassword ?? true;
 
-  const [syncGoogle, setSyncGoogle] = useState(false);
-  const [theme, setTheme] = useState<"Light" | "Dark" | "System">("Light");
+  async function changeLoginAlerts(on: boolean) {
+    setLoginAlerts(on);
+    if (!me.id) return;
+    setSavingLoginAlerts(true);
+    const result = await updateMyLoginAlerts(on);
+    setSavingLoginAlerts(false);
+    if (!result.ok) {
+      setLoginAlerts(!on);
+      toast.error(result.message ?? "Couldn't save your login alert setting.");
+      return;
+    }
+    toast.success(on ? `Login alerts on — we'll email ${me.email || "you"} when your account is signed in to from a new device.` : "Login alerts off.");
+  }
+
+  // --- Calendar sync ---
+  const [calendarToken, setCalendarToken] = useState<string | null>(initialSettings?.calendarToken ?? null);
+  const [savingCalendar, setSavingCalendar] = useState(false);
+  const origin = useSyncExternalStore(noopSubscribe, () => window.location.origin, () => "");
+  const feedUrl = calendarToken && origin ? `${origin}/api/calendar/${calendarToken}.ics` : "";
+  const webcalUrl = feedUrl.replace(/^https?:/, "webcal:");
+  const isLocalhost = /\/\/(localhost|127\.0\.0\.1)(:|\/)/.test(feedUrl);
+
+  async function changeCalendarSync(on: boolean, regenerate = false) {
+    if (!me.id) {
+      toast("Calendar sync is available once you're signed in.");
+      return;
+    }
+    setSavingCalendar(true);
+    const result = on ? await getMyCalendarFeed({ regenerate }) : await disableMyCalendarFeed();
+    setSavingCalendar(false);
+    if (!result.ok) {
+      toast.error(result.message ?? "Couldn't update calendar sync.");
+      return;
+    }
+    if (on) {
+      setCalendarToken((result as { token?: string }).token ?? null);
+      toast.success(regenerate ? "New calendar link created — the old link no longer works." : "Calendar sync is on. Add it to your calendar below.");
+    } else {
+      setCalendarToken(null);
+      toast.success("Calendar sync off — the calendar link no longer works.");
+    }
+  }
+
+  async function copyFeedUrl() {
+    try {
+      await navigator.clipboard.writeText(feedUrl);
+      toast.success("Calendar link copied.");
+    } catch {
+      toast.error("Couldn't copy — select the link and copy it manually.");
+    }
+  }
+
+  // --- Theme ---
+  const browserTheme = useSyncExternalStore(noopSubscribe, readThemeCookie, () => "light" as ThemePreference);
+  const [themeChoice, setThemeChoice] = useState<ThemePreference | null>(initialSettings?.theme ?? null);
+  const theme = themeChoice ?? browserTheme;
+
+  async function changeTheme(next: ThemePreference) {
+    const previous = theme;
+    setThemeChoice(next);
+    writeThemeCookie(next);
+    applyTheme(next);
+    const result = await updateMyTheme(next);
+    if (!result.ok) {
+      setThemeChoice(previous);
+      writeThemeCookie(previous);
+      applyTheme(previous);
+      toast.error(result.message ?? "Couldn't save your theme.");
+      return;
+    }
+    toast.success(`${themeLabels.find((t) => t.value === next)?.label} theme on${me.id ? " — saved to your account" : ""}.`);
+  }
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 
-  const [toast, setToast] = useState<string | null>(null);
   function flash(message: string) {
-    setToast(message);
-    setTimeout(() => setToast((cur) => (cur === message ? null : cur)), 2500);
+    toast(message);
   }
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const passwordMismatch = !!confirmPassword && newPassword !== confirmPassword;
+  const passwordTooWeak = !!newPassword && (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword));
+
+  function closePasswordModal() {
+    if (savingPassword) return;
+    setChangePasswordOpen(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  }
+
+  async function submitPasswordChange() {
+    if (!me.id) {
+      toast("Password changes are available once you're signed in.");
+      return;
+    }
+    if (passwordTooWeak) {
+      toast.error("Use at least 8 characters, including a letter and a number.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("The new passwords don't match.");
+      return;
+    }
+    setSavingPassword(true);
+    const result = await changeMyPassword({ currentPassword, newPassword });
+    setSavingPassword(false);
+    if (!result.ok) {
+      toast.error(result.message ?? "We couldn't change your password.");
+      return;
+    }
+    toast.success(result.message ?? "Password updated.");
+    setChangePasswordOpen(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  }
 
   function openMobilePanel(panel: MobilePanel) {
     setMobilePanel(panel);
@@ -172,20 +417,14 @@ export function StudentSettingsClient() {
             <h2 className="font-heading text-base font-semibold text-ensena-ink">Account Information</h2>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-xs font-medium text-ensena-muted">Full name</span>
-              <input
-                value={me.name}
-                readOnly
-                disabled
-                className="h-10 cursor-not-allowed rounded-lg border border-ensena-border bg-ensena-bg-soft px-3 text-sm text-ensena-muted"
-              />
-              <span className="text-xs text-ensena-muted">To correct your name, please contact Ensena Support.</span>
+              <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-xs font-medium text-ensena-muted">Email address</span>
               {me.id ? (
                 <>
                   <input value={email} readOnly disabled className="h-10 cursor-not-allowed rounded-lg border border-ensena-border bg-ensena-bg-soft px-3 text-sm text-ensena-muted" />
-                  <span className="text-xs text-ensena-muted">To change your sign-in email, please contact Ensena Support.</span>
+                  <span className="text-xs text-ensena-muted">To correct your email, please contact Ensena Support.</span>
                 </>
               ) : (
                 <input value={email} onChange={(e) => setEmail(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
@@ -195,8 +434,8 @@ export function StudentSettingsClient() {
               <span className="text-xs font-medium text-ensena-muted">Phone number</span>
               <input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
             </label>
-            <Button onClick={saveAccount} className="mt-2 h-10 w-fit rounded-full bg-ensena-primary px-5 text-sm font-semibold text-white">
-              {accountSaved ? "Saved!" : "Save Changes"}
+            <Button onClick={requestSaveAccount} className="mt-2 h-10 w-fit rounded-full bg-ensena-primary px-5 text-sm font-semibold text-white">
+              Save Changes
             </Button>
           </div>
         );
@@ -205,9 +444,27 @@ export function StudentSettingsClient() {
         return (
           <div className="flex flex-col gap-3">
             <h2 className="font-heading text-base font-semibold text-ensena-ink">Notification Preferences</h2>
-            <Toggle checked={emailNotifs} onChange={setEmailNotifs} label="Email Notifications" description="Booking confirmations, homework and reminders" />
+            <Toggle checked={emailNotifs} onChange={(v) => savingPref !== "email" && void changeEmailNotifs(v)} label="Email Notifications" description={`Booking confirmations, homework and reminders${me.id ? ` — sent to ${me.email}` : ""}`} />
+            {me.id && emailNotifs && (
+              <button type="button" onClick={() => sendTest("email")} disabled={testing !== null} className="-mt-1 self-start text-xs font-semibold text-ensena-primary hover:underline disabled:opacity-60">
+                {testing === "email" ? "Sending…" : "Send me a test email"}
+              </button>
+            )}
             <Toggle checked={smsNotifs} onChange={setSmsNotifs} label="SMS Notifications" description="Get a text before upcoming lessons" />
-            <Toggle checked={pushNotifs} onChange={setPushNotifs} label="Push Notifications" description="Browser and mobile push alerts" />
+            <Toggle
+              checked={pushNotifs}
+              onChange={(v) => savingPref !== "push" && void changePushNotifs(v)}
+              label="Push Notifications"
+              description={savingPref === "push" ? "Setting up…" : "Alerts on this device, even when Ensena isn't open"}
+            />
+            {me.id && pushNotifs && (
+              <button type="button" onClick={() => sendTest("push")} disabled={testing !== null} className="-mt-1 self-start text-xs font-semibold text-ensena-primary hover:underline disabled:opacity-60">
+                {testing === "push" ? "Sending…" : "Send a test push to my devices"}
+              </button>
+            )}
+            {me.id && !pushNotifs && pushNeedsInstall && (
+              <p className="text-xs text-ensena-muted">On iPhone/iPad, add Ensena to your Home Screen (Share → Add to Home Screen) to get push notifications.</p>
+            )}
           </div>
         );
 
@@ -215,12 +472,25 @@ export function StudentSettingsClient() {
         return (
           <div className="flex flex-col gap-3">
             <h2 className="font-heading text-base font-semibold text-ensena-ink">Privacy</h2>
-            <Toggle checked={profilePublic} onChange={setProfilePublic} label="Public Profile" description="Allow tutors to see your profile before booking" />
+            <Toggle
+              checked={profilePublic}
+              onChange={(v) => savingPrivacy === null && void changePrivacy("public", v)}
+              label="Public Profile"
+              description={
+                profilePublic
+                  ? "Tutors can see your name, level, subjects, bio and learning goals before you book"
+                  : "Private — only tutors you've booked with can see your profile"
+              }
+            />
             <Toggle
               checked={shareProgressWithParent}
-              onChange={setShareProgressWithParent}
+              onChange={(v) => savingPrivacy === null && void changePrivacy("share", v)}
               label="Share Progress with Parent"
-              description="Your linked parent account can view your progress reports"
+              description={
+                me.guardian
+                  ? `${me.guardian.fullName || "Your parent/guardian"} ${shareProgressWithParent ? "can" : "can't"} see your learning plan, subjects and progress on their dashboard`
+                  : "Applies once a parent or guardian is linked to your account"
+              }
             />
           </div>
         );
@@ -230,10 +500,16 @@ export function StudentSettingsClient() {
           <div className="flex flex-col gap-3">
             <h2 className="font-heading text-base font-semibold text-ensena-ink">Security</h2>
             <Toggle checked={twoFactor} onChange={setTwoFactor} label="Two-Factor Authentication" description="Add an extra layer of security to your account" />
-            <Toggle checked={loginAlerts} onChange={setLoginAlerts} label="Login Alerts" description="Get notified of new device sign-ins" />
+            <Toggle
+              checked={loginAlerts}
+              onChange={(v) => !savingLoginAlerts && void changeLoginAlerts(v)}
+              label="Login Alerts"
+              description={`Get an email${me.id ? ` at ${me.email}` : ""} when your account is signed in to from a new device`}
+            />
             <Button variant="outline" onClick={() => setChangePasswordOpen(true)} className="mt-2 h-10 w-fit rounded-full border-ensena-border px-5 text-sm font-medium">
-              Change Password
+              {hasPassword ? "Change Password" : "Set a Password"}
             </Button>
+            {!hasPassword && <p className="text-xs text-ensena-muted">You sign in with Google. Add a password to also sign in with your email address.</p>}
           </div>
         );
 
@@ -252,7 +528,53 @@ export function StudentSettingsClient() {
         return (
           <div className="flex flex-col gap-3">
             <h2 className="font-heading text-base font-semibold text-ensena-ink">Calendar Sync</h2>
-            <Toggle checked={syncGoogle} onChange={setSyncGoogle} label="Sync with Google Calendar" description="Automatically add lessons to your calendar" />
+            <Toggle
+              checked={!!calendarToken}
+              onChange={(v) => !savingCalendar && void changeCalendarSync(v)}
+              label="Sync with Google Calendar"
+              description={savingCalendar ? "Updating…" : "Your lessons, sessions and homework due dates appear in your calendar and stay up to date automatically"}
+            />
+            {calendarToken && feedUrl && (
+              <div className="flex flex-col gap-3 rounded-xl border border-ensena-border bg-ensena-bg-soft p-4">
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-9 items-center rounded-full bg-ensena-primary px-4 text-sm font-semibold text-white hover:bg-ensena-primary-hover"
+                  >
+                    Add to Google Calendar
+                  </a>
+                  <a href={webcalUrl} className="inline-flex h-9 items-center rounded-full border border-ensena-border px-4 text-sm font-medium text-ensena-ink hover:bg-ensena-surface">
+                    Apple / Outlook
+                  </a>
+                  <a href={feedUrl} download="ensena.ics" className="inline-flex h-9 items-center rounded-full border border-ensena-border px-4 text-sm font-medium text-ensena-ink hover:bg-ensena-surface">
+                    Download .ics
+                  </a>
+                </div>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-xs font-medium text-ensena-muted">Private calendar link (keep it secret — anyone with it can see your schedule)</span>
+                  <div className="flex gap-2">
+                    <input readOnly value={feedUrl} onFocus={(e) => e.currentTarget.select()} className="h-9 min-w-0 flex-1 rounded-lg border border-ensena-border px-3 text-xs" />
+                    <Button variant="outline" onClick={copyFeedUrl} className="h-9 rounded-full border-ensena-border px-4 text-xs font-medium">
+                      Copy
+                    </Button>
+                  </div>
+                </label>
+                <p className="text-xs text-ensena-muted">
+                  Google Calendar refreshes subscribed calendars every few hours; Apple Calendar and Outlook let you choose how often.
+                  {isLocalhost && " Note: calendar apps can't reach localhost — this works once Ensena is deployed."}
+                </p>
+                <button
+                  type="button"
+                  disabled={savingCalendar}
+                  onClick={() => void changeCalendarSync(true, true)}
+                  className="self-start text-xs font-semibold text-ensena-primary hover:underline disabled:opacity-60"
+                >
+                  Reset link (if you shared it by mistake)
+                </button>
+              </div>
+            )}
           </div>
         );
 
@@ -261,20 +583,25 @@ export function StudentSettingsClient() {
           <div className="flex flex-col gap-3">
             <h2 className="font-heading text-base font-semibold text-ensena-ink">Theme</h2>
             <div className="flex gap-2">
-              {(["Light", "Dark", "System"] as const).map((t) => (
+              {themeLabels.map((t) => (
                 <button
-                  key={t}
+                  key={t.value}
                   type="button"
-                  onClick={() => setTheme(t)}
+                  onClick={() => theme !== t.value && void changeTheme(t.value)}
+                  aria-pressed={theme === t.value}
+                  title={t.hint}
                   className={cn(
                     "rounded-full border px-4 py-2 text-sm font-medium",
-                    theme === t ? "border-ensena-primary bg-ensena-primary/5 text-ensena-ink" : "border-ensena-border text-ensena-muted"
+                    theme === t.value ? "border-ensena-primary bg-ensena-primary/5 text-ensena-ink" : "border-ensena-border text-ensena-muted"
                   )}
                 >
-                  {t}
+                  {t.label}
                 </button>
               ))}
             </div>
+            <p className="text-xs text-ensena-muted">
+              {theme === "system" ? "Follows your device's light/dark setting. " : ""}Applies to your Ensena dashboard{me.id ? " on all your devices" : ""}.
+            </p>
           </div>
         );
 
@@ -504,42 +831,64 @@ export function StudentSettingsClient() {
         )}
       </Modal>
 
-      <Modal
-        open={changePasswordOpen}
-        onClose={() => {
-          setChangePasswordOpen(false);
-          setCurrentPassword("");
-          setNewPassword("");
-        }}
-        title="Change Password"
-      >
+      <Modal open={confirmAccountOpen} onClose={() => !savingAccount && setConfirmAccountOpen(false)} title="Save these changes?">
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs font-medium text-ensena-muted">Current password</span>
-            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs font-medium text-ensena-muted">New password</span>
-            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
-          </label>
-          <Button
-            disabled={!currentPassword || !newPassword}
-            onClick={() => {
-              setChangePasswordOpen(false);
-              setCurrentPassword("");
-              setNewPassword("");
-              flash("Password updated. (Demo environment: no real credential was changed.)");
-            }}
-            className="mt-1 h-10 w-full rounded-full bg-ensena-primary text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Update Password
-          </Button>
+          <p className="text-sm text-ensena-muted">Are you sure you want to update your account details?</p>
+          <div className="rounded-xl bg-ensena-bg-soft p-3 text-sm">
+            {fullName.trim() !== me.name && (
+              <p><span className="text-ensena-muted">Name:</span> {me.name} → <span className="font-semibold text-ensena-ink">{fullName.trim()}</span></p>
+            )}
+            {phone.trim() !== me.phone && (
+              <p><span className="text-ensena-muted">Phone:</span> {me.phone || "—"} → <span className="font-semibold text-ensena-ink">{phone.trim() || "—"}</span></p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setConfirmAccountOpen(false)} disabled={savingAccount} className="h-10 flex-1 rounded-full border-ensena-border text-sm font-medium">
+              No, cancel
+            </Button>
+            <Button onClick={confirmSaveAccount} loading={savingAccount} className="h-10 flex-1 rounded-full bg-ensena-primary text-sm font-semibold text-white">
+              Yes, save
+            </Button>
+          </div>
         </div>
       </Modal>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ensena-ink px-4 py-2 text-sm text-white shadow-lg">{toast}</div>
-      )}
+      <Modal open={changePasswordOpen} onClose={closePasswordModal} title={hasPassword ? "Change Password" : "Set a Password"}>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitPasswordChange();
+          }}
+        >
+          {hasPassword && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs font-medium text-ensena-muted">Current password</span>
+              <input type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
+            </label>
+          )}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs font-medium text-ensena-muted">New password</span>
+            <input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
+            <span className={cn("text-xs", passwordTooWeak ? "text-ensena-danger" : "text-ensena-muted")}>At least 8 characters, with a letter and a number.</span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs font-medium text-ensena-muted">Confirm new password</span>
+            <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm" />
+            {passwordMismatch && <span className="text-xs text-ensena-danger">The passwords don&apos;t match.</span>}
+          </label>
+          <Button
+            type="submit"
+            loading={savingPassword}
+            disabled={(hasPassword && !currentPassword) || !newPassword || !confirmPassword || passwordMismatch || passwordTooWeak}
+            className="mt-1 h-10 w-full rounded-full bg-ensena-primary text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {hasPassword ? "Update Password" : "Set Password"}
+          </Button>
+          <p className="text-xs text-ensena-muted">We&apos;ll email you to confirm the change.</p>
+        </form>
+      </Modal>
+
     </div>
   );
 }

@@ -23,6 +23,9 @@ export interface GuardianChild {
   course: string;
   subjects: string[];
   goal: string;
+  /** False when the student turned off "Share Progress with Parent" — the
+   *  learning plan / progress fields are then left empty server-side. */
+  progressShared: boolean;
   relationship: string;
   consentStatus: "pending" | "confirmed";
   consentedAt: string | null;
@@ -58,6 +61,7 @@ const demoIdentity: GuardianIdentity = {
     course: "",
     subjects: [],
     goal: "",
+    progressShared: true,
     relationship: "Parent",
     consentStatus: "confirmed",
     consentedAt: null,
