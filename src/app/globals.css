@@ -1,0 +1,254 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-poppins);
+  --color-ensena-primary: var(--ensena-primary);
+  --color-ensena-secondary: var(--ensena-secondary);
+  --color-ensena-accent: var(--ensena-accent);
+  --color-ensena-ink: var(--ensena-ink);
+  --color-ensena-muted: var(--ensena-muted);
+  --color-ensena-border: var(--ensena-border);
+  --color-ensena-success: var(--ensena-success);
+  --color-ensena-warning: var(--ensena-warning);
+  --color-ensena-danger: var(--ensena-danger);
+  --color-ensena-link: var(--ensena-link);
+  --color-ensena-bg-soft: var(--ensena-bg-soft);
+  --color-ensena-cta-from: var(--ensena-cta-from);
+  --color-ensena-cta-to: var(--ensena-cta-to);
+  --color-ensena-primary-hover: var(--ensena-primary-hover);
+  --color-ensena-primary-active: var(--ensena-primary-active);
+  --color-ensena-info: var(--ensena-info);
+  --color-ensena-escrow-tint: var(--ensena-escrow-tint);
+  /* Overrides Tailwind's built-in `rose` palette with the Ensena brand scale
+     (see --rose-* below) so every existing rose-* utility class across the
+     app — not just components that reference --color-ensena-primary — picks
+     up the real brand color instead of stock Tailwind pink. */
+  --color-rose-50: var(--rose-50);
+  --color-rose-100: var(--rose-100);
+  --color-rose-200: var(--rose-200);
+  --color-rose-300: var(--rose-300);
+  --color-rose-400: var(--rose-400);
+  --color-rose-500: var(--rose-500);
+  --color-rose-600: var(--rose-600);
+  --color-rose-700: var(--rose-700);
+  --color-rose-800: var(--rose-800);
+  --color-rose-900: var(--rose-900);
+  --color-rose-950: var(--rose-950);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /* Dedicated "surface" tokens — the app's own convention is a literal
+     white card floating on a soft page background; dark mode needs the
+     same two-level hierarchy inverted, plus one more "elevated" level for
+     things that sit above a card (modals, dropdowns, popovers). Kept
+     separate from shadcn's own --card so existing shadcn-based components
+     (Button/Input/Select) are untouched while the rest of the app (which
+     almost never referenced --card) gets a real token to migrate onto
+     instead of the literal `bg-white` it was using. */
+  --color-ensena-surface: var(--ensena-surface);
+  --color-ensena-surface-elevated: var(--ensena-surface-elevated);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #2e2e3a;
+  --card: #ffffff;
+  --card-foreground: #2e2e3a;
+  --popover: #ffffff;
+  --popover-foreground: #2e2e3a;
+  --primary: #f80248;
+  --primary-foreground: #ffffff;
+  --secondary: #cbefff;
+  --secondary-foreground: #2e2e3a;
+  --muted: #f8fafc;
+  --muted-foreground: #717171;
+  --accent: #cbefff;
+  --accent-foreground: #2e2e3a;
+  --destructive: #ef4444;
+  --border: #eaecef;
+  --input: #eaecef;
+  --ring: #f80248;
+  --chart-1: #f80248;
+  --chart-2: #22c55e;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #717171;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #2e2e3a;
+  --sidebar-primary: #f80248;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(248, 2, 72, 0.08);
+  --sidebar-accent-foreground: #f80248;
+  --sidebar-border: #eaecef;
+  --sidebar-ring: #f80248;
+
+  /* Ensena brand scale — a full Tailwind-style 50-950 ramp anchored on the
+     official primary #F80248 (pinned exactly at the 600 stop, which is
+     where the app's heaviest usage — bg-rose-600 buttons — already sat).
+     Overrides Tailwind's stock "rose" palette above, so any rose-colored
+     utility class anywhere in the app automatically renders in the real
+     brand color instead of stock Tailwind pink. */
+  --rose-50: #fef0f3;
+  --rose-100: #fddde4;
+  --rose-200: #fdb9c8;
+  --rose-300: #fd86a0;
+  --rose-400: #fe4870;
+  --rose-500: #fe2050;
+  --rose-600: #f80248; /* = brand primary */
+  --rose-700: #cb012d;
+  --rose-800: #a20728;
+  --rose-900: #800a23;
+  --rose-950: #450815;
+
+  /* Ensena brand system — primary #F80248 (finalized) */
+  --ensena-primary: #f80248;
+  --ensena-primary-hover: #cb012d; /* --rose-700 */
+  --ensena-primary-active: #a20728; /* --rose-800 */
+  --ensena-secondary: #cbefff; /* Soft Blue — info cards, empty states, student highlights, calendar */
+  --ensena-accent: #cbefff;
+  --ensena-ink: #2e2e3a;
+  --ensena-muted: #717171;
+  --ensena-border: #eaecef;
+  --ensena-success: #22c55e;
+  --ensena-warning: #f59e0b;
+  --ensena-danger: #ef4444;
+  --ensena-info: #3b82f6;
+  --ensena-link: #f80248; /* brand color now covers links per the finalized rule set */
+  --ensena-bg-soft: #f8fafc;
+  --ensena-escrow-tint: rgba(248, 2, 72, 0.08);
+  --ensena-cta-from: #f80248;
+  --ensena-cta-to: #f80248;
+
+  /* Light mode: identical to the card white every existing "card" div
+     already hardcodes, so migrating a component from `bg-white` to
+     `bg-ensena-surface` is a visual no-op in light mode. */
+  --ensena-surface: #ffffff;
+  --ensena-surface-elevated: #ffffff;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Global motion system
+   -----------------------------------------------------------------------
+   One shared timing/easing convention so every component (existing and
+   new) reads as the same product rather than each screen inventing its
+   own animation:
+     - 150ms  micro-interactions: hover/press feedback, icon color swaps.
+     - 200ms  standard overlays: modals, drawers/sheets, toasts, the
+              branded route-loading bar. Matches src/components/ui/modal.tsx.
+     - ease-out for anything ENTERING (starts fast, settles — feels responsive).
+     - ease-in for anything LEAVING (starts slow, accelerates away).
+   src/components/ui/select.tsx's Base-UI-driven dropdown already got a
+   good enter/exit for free (100ms, animate-in/animate-out) before this
+   system existed — left as-is rather than fighting a working pattern.
+   ----------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.2s ease-in-out infinite;
+}
