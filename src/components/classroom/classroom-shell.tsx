@@ -32,6 +32,7 @@ import { getSessionLabelOverride, setSessionLabelOverride } from "@/lib/classroo
 import { recordJoin, recordLeave } from "@/lib/class-attendance-store";
 import { analyzeCommunication, BLOCKED_MESSAGE_COPY } from "@/lib/communication-safety";
 import { updateDiscoverySession } from "@/lib/discovery-sessions-store";
+import { endLiveClass } from "@/lib/actions/classroom-live";
 import { buildRestrictionMessage, isRestricted, recordViolation } from "@/lib/moderation-store";
 import { appendReviewPrompt } from "@/lib/review-prompt";
 import { useClassroomVisionSafety } from "@/hooks/use-classroom-vision-safety";
@@ -138,7 +139,9 @@ interface ClassroomShellProps {
 function useHasPaymentAccess(role: ClassroomRole, session: ClassroomSession): boolean {
   return useSyncExternalStore(
     subscribePaymentPlans,
-    () => (role !== "student" ? true : (getClassroomSession(role, session.kind, session.id)?.hasPaymentAccess ?? true)),
+    // A live (database-backed) session already carries the booking's real
+    // payment status from the server; demo sessions re-check the local ledger.
+    () => (role !== "student" ? true : session.live ? (session.hasPaymentAccess ?? true) : (getClassroomSession(role, session.kind, session.id)?.hasPaymentAccess ?? true)),
     () => true
   );
 }
@@ -175,13 +178,17 @@ function ClassroomShellInner({ role, session, leaveHref }: ClassroomShellProps) 
   useEffect(() => {
     if (session.kind !== "discovery" || !ended || markedDiscoveryEndRef.current) return;
     markedDiscoveryEndRef.current = true;
+    if (session.live) {
+      void endLiveClass({ kind: "discovery", id: session.id, reason: "schedule" });
+      return;
+    }
     updateDiscoverySession(session.id, {
       status: "Completed",
       funnelStage: "CompletedAwaitingFeedback",
       actualEndAtISO: new Date().toISOString(),
       endedBy: "schedule",
     });
-  }, [session.kind, session.id, ended]);
+  }, [session.kind, session.id, session.live, ended]);
 
   // A confirmed high-confidence contact-sharing finding ends the session for
   // BOTH participants, not just the violator's own tab — see terminateForViolation
@@ -637,6 +644,15 @@ function ClassroomShellInner({ role, session, leaveHref }: ClassroomShellProps) 
   // Available.
   function confirmLeave() {
     setLeaveOpen(false);
+    if (session.live && role === "tutor" && (session.kind === "private" || session.kind === "group" || session.kind === "discovery")) {
+      void endLiveClass({ kind: session.kind, id: session.id, liveSessionId: session.liveSessionId, reason: "ended" }).then((result) => {
+        if (!result.ok) showNotice(result.message ?? "We couldn't record the end of this class.");
+        else if (session.kind === "private") showNotice("Lesson marked complete. Your student has 24 hours to confirm before payment is released.");
+        else if (session.kind === "group") showNotice("Class marked complete. Students have 24 hours to report a problem before earnings are released.");
+        window.setTimeout(() => router.push(leaveHrefWithReviewPrompt), 1400);
+      });
+      return;
+    }
     if (role === "tutor" && session.kind === "discovery" && !markedDiscoveryEndRef.current) {
       markedDiscoveryEndRef.current = true;
       updateDiscoverySession(session.id, {
@@ -674,6 +690,20 @@ function ClassroomShellInner({ role, session, leaveHref }: ClassroomShellProps) 
   // owns the single unified notice/navigation for whichever session kind was
   // ended, so it skips this function's own copy of both.
   function endGroupSession(tutorReportedIssue?: string, options?: { silent?: boolean }) {
+    if (session.live) {
+      void endLiveClass({ kind: "group", id: session.id, liveSessionId: session.liveSessionId, reason: options?.silent ? "violation" : "ended", issue: tutorReportedIssue }).then((result) => {
+        if (options?.silent) return;
+        showNotice(
+          !result.ok
+            ? (result.message ?? "We couldn't record the end of this class.")
+            : tutorReportedIssue
+              ? "Session flagged for review. Every student's payment for this session is held pending Admin review."
+              : "Class marked complete. Students have 24 hours to report a problem before earnings are released."
+        );
+        window.setTimeout(() => router.push(leaveHrefWithReviewPrompt), 1400);
+      });
+      return;
+    }
     const groupClass = initialMyGroupClasses.find((g) => g.id === session.id);
     const todayISO = toISO(new Date());
     // currentCohort lives only on the computed cohort map (see
@@ -747,7 +777,11 @@ function ClassroomShellInner({ role, session, leaveHref }: ClassroomShellProps) 
     const violatorName = selfIdentityName;
     const disputeDetail = `Automated detection ended this live session after flagging ${violatorName} (${selfActorRole}) for an attempt to share prohibited contact information via ${source}.`;
 
-    if (session.kind === "private" && session.amountGross > 0 && session.studentName) {
+    if (session.live && (session.kind === "private" || session.kind === "discovery")) {
+      void endLiveClass({ kind: session.kind, id: session.id, reason: "violation", issue: disputeDetail });
+    } else if (session.live && session.kind === "group") {
+      if (role === "tutor") endGroupSession(disputeDetail, { silent: true });
+    } else if (session.kind === "private" && session.amountGross > 0 && session.studentName) {
       const id = `lc-cls-${session.kind}-${session.id}`;
       startLessonConfirmation({
         id,

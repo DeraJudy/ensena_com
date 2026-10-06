@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 
 import { PrivateClassroomPageClient } from "@/components/classroom/private-classroom-page-client";
-import { initialPrivateLessons } from "@/lib/tutor-dashboard-data";
-
-export function generateStaticParams() {
-  return initialPrivateLessons.map((l) => ({ id: l.id }));
-}
+import { LiveClassroomPage } from "@/components/classroom/live-classroom-page";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export async function generateMetadata(): Promise<Metadata> {
   // Real lesson data only exists client-side (see PrivateClassroomPageClient's
@@ -17,5 +14,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function TutorPrivateClassroomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (isSupabaseConfigured()) return <LiveClassroomPage kind="private" id={id} role="tutor" leaveHref={"/tutor-dashboard"} />;
   return <PrivateClassroomPageClient role="tutor" id={id} />;
 }

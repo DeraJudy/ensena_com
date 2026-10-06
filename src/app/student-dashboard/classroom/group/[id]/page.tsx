@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 
 import { GroupClassroomClient } from "@/components/classroom/group-classroom-client";
-import { studentGroupClasses } from "@/lib/student-dashboard-data";
-
-export function generateStaticParams() {
-  return studentGroupClasses.map((c) => ({ id: c.id }));
-}
+import { LiveClassroomPage } from "@/components/classroom/live-classroom-page";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export async function generateMetadata(): Promise<Metadata> {
   // Real group-class data (a student's real enrollment) only exists
@@ -18,5 +15,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function StudentGroupClassroomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (isSupabaseConfigured()) return <LiveClassroomPage kind="group" id={id} role="student" leaveHref={"/student-dashboard/lessons?tab=Completed"} />;
   return <GroupClassroomClient role="student" id={id} fallbackLeaveHref={`/student-dashboard/group-classes/${id}`} />;
 }

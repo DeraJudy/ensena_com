@@ -97,6 +97,12 @@ export interface ClassroomSession {
    * "Enter Class" button (a student who navigates straight to the
    * classroom URL must be blocked here too). */
   hasPaymentAccess?: boolean;
+  /** Built from the database (classroom-live-server.ts) rather than demo data:
+   * payment access comes from the booking row and ending a class is recorded
+   * through server actions instead of browser storage. */
+  live?: boolean;
+  /** Live group classes only — the group_class_sessions row this room is for. */
+  liveSessionId?: string;
 }
 
 function parseNairaAmount(text: string | undefined): number {

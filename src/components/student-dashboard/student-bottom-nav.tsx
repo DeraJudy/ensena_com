@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Calendar, Compass, Heart, MessageSquare, User } from "lucide-react";
 
 import { studentMobileNavItems, type StudentSidebarNavItem } from "@/lib/student-dashboard-data";
+import { useStudentIdentity } from "@/components/student-dashboard/student-identity";
 import { cn } from "@/lib/utils";
 
 const navIcons: Record<string, typeof Compass> = {
@@ -27,6 +28,7 @@ function isItemActive(item: StudentSidebarNavItem, pathname: string): boolean {
 // clear of the iPhone home-indicator area.
 export function StudentBottomNav() {
   const pathname = usePathname();
+  const me = useStudentIdentity();
   const navItems = studentMobileNavItems;
 
   return (
@@ -49,9 +51,9 @@ export function StudentBottomNav() {
               >
                 <span className="relative">
                   <Icon className={cn("size-5", active && "fill-ensena-primary/10")} strokeWidth={active ? 2.25 : 1.75} />
-                  {item.badge && (
+                  {(item.label === "Messages" && me.unreadMessages !== null ? me.unreadMessages || undefined : item.badge) && (
                     <span className="absolute -right-1.5 -top-1.5 flex size-3.5 items-center justify-center rounded-full bg-ensena-primary text-[8px] font-semibold text-white">
-                      {item.badge}
+                      {item.label === "Messages" && me.unreadMessages !== null ? (me.unreadMessages > 9 ? "9+" : me.unreadMessages) : item.badge}
                     </span>
                   )}
                 </span>

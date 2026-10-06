@@ -41,6 +41,8 @@ export interface StudentIdentity {
   tier: string;
   /** Parent/guardian for "My child" sign-ups (student_guardians). */
   guardian: StudentGuardian | null;
+  /** Real unread message count (conversation_participants); null in demo mode. */
+  unreadMessages: number | null;
 }
 
 export interface StudentIdentityRow {
@@ -60,6 +62,7 @@ export interface StudentIdentityRow {
   supportTypes: string[] | null;
   learningGoals: string[] | null;
   guardian: StudentGuardian | null;
+  unreadMessages?: number;
 }
 
 const demoIdentity: StudentIdentity = {
@@ -82,6 +85,7 @@ const demoIdentity: StudentIdentity = {
   learningGoals: studentProfileDetail.learningGoals,
   tier: dashboardStudent.tier,
   guardian: null,
+  unreadMessages: null,
 };
 
 function toIdentity(row: StudentIdentityRow): StudentIdentity {
@@ -107,6 +111,7 @@ function toIdentity(row: StudentIdentityRow): StudentIdentity {
     learningGoals: row.learningGoals?.length ? row.learningGoals : (row.goal ?? "").split("\n").filter(Boolean),
     tier: "Student",
     guardian: row.guardian,
+    unreadMessages: row.unreadMessages ?? 0,
   };
 }
 

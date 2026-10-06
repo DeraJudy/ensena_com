@@ -9,6 +9,7 @@ import { SignOutLink } from "@/components/auth/sign-out-link";
 import { hasCounsellingRecords, hasUpcomingCounsellingSession } from "@/lib/admin-counselling-data";
 import { buildStudentNavItems, dashboardStudent, studentAccountNavItems, type StudentSidebarNavItem } from "@/lib/student-dashboard-data";
 import { buildContactSupportHref } from "@/lib/support-links";
+import { useStudentIdentity } from "@/components/student-dashboard/student-identity";
 import { cn } from "@/lib/utils";
 
 const navIcons: Record<string, typeof LayoutDashboard> = {
@@ -38,6 +39,7 @@ function isItemActive(item: StudentSidebarNavItem, pathname: string): boolean {
 // mutually exclusive rather than one being a squeezed copy of the other.
 export function StudentSidebar() {
   const pathname = usePathname();
+  const me = useStudentIdentity();
   const showCounselling = hasCounsellingRecords(dashboardStudent.name);
   const navItems = buildStudentNavItems(showCounselling, showCounselling && hasUpcomingCounsellingSession(dashboardStudent.name));
 
@@ -63,9 +65,9 @@ export function StudentSidebar() {
                 >
                   <Icon className="size-4.5 shrink-0" />
                   <span className="flex-1 truncate">{item.label}</span>
-                  {item.badge && (
+                  {(item.label === "Messages" && me.unreadMessages !== null ? me.unreadMessages || undefined : item.badge) && (
                     <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-ensena-primary text-[10px] font-semibold text-white">
-                      {item.badge}
+                      {item.label === "Messages" && me.unreadMessages !== null ? (me.unreadMessages > 9 ? "9+" : me.unreadMessages) : item.badge}
                     </span>
                   )}
                 </Link>

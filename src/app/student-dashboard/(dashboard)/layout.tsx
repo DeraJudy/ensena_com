@@ -24,13 +24,14 @@ export default async function StudentDashboardLayout({ children }: { children: R
   let accountTheme: ThemePreference | null = null;
   if (profile) {
     const supabase = await getSupabaseServerClient();
-    const [{ data: contact }, { data: student }, { data: guardian }, settings] = await Promise.all([
+    const [{ data: contact }, { data: student }, { data: guardian }, settings, { data: inbox }] = await Promise.all([
       supabase.from("profiles").select("phone, date_of_birth").eq("id", profile.id).maybeSingle(),
       // "*" so newer columns (bio, support_types, learning_goals) are picked
       // up when present without breaking before the migration has run.
       supabase.from("student_profiles").select("*").eq("id", profile.id).maybeSingle(),
       supabase.from("student_guardians").select("full_name, relationship, email, phone, consent_status").eq("student_id", profile.id).maybeSingle(),
       getAccountSettings(profile.id),
+      supabase.from("conversation_participants").select("unread_count").eq("user_id", profile.id).eq("archived", false),
     ]);
     accountTheme = settings.saved ? settings.theme : null;
     identity = {
@@ -58,6 +59,7 @@ export default async function StudentDashboardLayout({ children }: { children: R
             consentStatus: guardian.consent_status === "confirmed" ? "confirmed" : "pending",
           }
         : null,
+      unreadMessages: ((inbox ?? []) as { unread_count: number }[]).reduce((n, r) => n + (r.unread_count ?? 0), 0),
     };
   }
 
