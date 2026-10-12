@@ -7,6 +7,7 @@ import { myTutors } from "@/lib/student-dashboard-data";
 import { getSupabaseServerClient as getServiceRoleClient } from "@/lib/supabase";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { requireRole } from "@/lib/supabase/require-role";
+import { getPlatformNowMs } from "@/lib/platform-time";
 import { loadTutorProfile } from "@/lib/tutor-directory-server";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -25,6 +26,12 @@ export default async function StudentTutorDetailPage({ params }: { params: Promi
   }
   const tutor = await loadTutorProfile(id);
   if (!tutor) notFound();
-  const { count } = await getServiceRoleClient().from("saved_tutors").select("tutor_id", { count: "exact", head: true }).eq("student_id", profile.id).eq("tutor_id", id);
-  return <TutorProfileReal tutor={tutor} initiallySaved={(count ?? 0) > 0} />;
+  const admin = getServiceRoleClient();
+  const [{ count }, { count: lessons }, { count: discovery }] = await Promise.all([
+    admin.from("saved_tutors").select("tutor_id", { count: "exact", head: true }).eq("student_id", profile.id).eq("tutor_id", id),
+    admin.from("private_lessons").select("id", { count: "exact", head: true }).eq("student_id", profile.id).eq("tutor_id", id),
+    admin.from("discovery_sessions").select("id", { count: "exact", head: true }).eq("student_id", profile.id).eq("tutor_id", id),
+  ]);
+  const canMessage = tutor.acceptsNewMessages || (lessons ?? 0) + (discovery ?? 0) > 0;
+  return <TutorProfileReal tutor={tutor} initiallySaved={(count ?? 0) > 0} canMessage={canMessage} nowMs={getPlatformNowMs()} />;
 }

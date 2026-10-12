@@ -94,7 +94,7 @@ export async function createPrivateBooking(input: CreateBookingInput): Promise<B
   if (!student) return { ok: false, message: "Please sign in as a student to book a lesson." };
 
   const tutor = await loadTutorProfile(input.tutorId);
-  if (!tutor) return { ok: false, message: "This tutor isn't taking bookings right now." };
+  if (!tutor || tutor.onVacation) return { ok: false, message: "This tutor isn't taking bookings right now." };
   if (!tutor.pricePerHour) return { ok: false, message: "This tutor hasn't set a price yet, so they can't be booked online." };
   const subject = tutor.subjects.find((s) => s === input.subject);
   if (!subject) return { ok: false, message: "Pick one of the subjects this tutor teaches." };

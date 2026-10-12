@@ -56,6 +56,35 @@ interface OutgoingMessage {
 const titleOf = (c: InboxConversation) => (c.others.length ? c.others.map((o) => o.name).join(", ") : c.contextLabel || "Conversation");
 const roleLabel = (role: string) => (role === "tutor" ? "Tutor" : role === "counsellor" ? "Counsellor" : role === "admin" || role === "staff" ? "Ensena Support" : role === "student" ? "Student" : "");
 
+// Everything role-specific about the inbox: where it lives and where its
+// links go. The conversations themselves work the same for every role.
+interface InboxVariant {
+  base: string;
+  subtitle: string;
+  emptyHint: string;
+  emptyCta: { href: string; label: string } | null;
+  personHref: (person: { id: string; role: string }) => { href: string; label: string } | null;
+  lessonHref: (lessonId: string) => string;
+}
+
+const studentInbox: InboxVariant = {
+  base: "/student-dashboard/messages",
+  subtitle: "Stay connected with your tutors and Ensena.",
+  emptyHint: "Message a tutor from their profile to ask questions before you book.",
+  emptyCta: { href: "/student-dashboard/find-a-tutor", label: "Find a tutor" },
+  personHref: (p) => (p.role === "tutor" ? { href: `/student-dashboard/tutors/${p.id}`, label: "View tutor profile" } : null),
+  lessonHref: (id) => `/student-dashboard/lessons?view=${id}`,
+};
+
+const tutorInbox: InboxVariant = {
+  base: "/tutor-dashboard/messages",
+  subtitle: "Chat with your students and Ensena support.",
+  emptyHint: "Students who message you, and students you teach, show up here. Use the message button on any student to start a chat.",
+  emptyCta: { href: "/tutor-dashboard/students", label: "My students" },
+  personHref: (p) => (p.role === "student" ? { href: `/tutor-dashboard/students/${p.id}`, label: "View student" } : null),
+  lessonHref: (id) => `/tutor-dashboard/private-lessons/${id}`,
+};
+
 function listTime(ms: number, nowMs: number): string {
   const day = relativeDay(ms, nowMs);
   return day === "Today" ? formatTime(ms) : day;
@@ -72,12 +101,15 @@ export function MessagesReal({
   initialInbox,
   initialActiveId,
   initialThread,
+  role = "student",
 }: {
   selfId: string;
   initialInbox: InboxConversation[];
   initialActiveId: string | null;
   initialThread: Thread | null;
+  role?: "student" | "tutor";
 }) {
+  const variant = role === "tutor" ? tutorInbox : studentInbox;
   const router = useRouter();
   const [inbox, setInbox] = useState(initialInbox);
   const [activeId, setActiveId] = useState<string | null>(initialActiveId);
@@ -131,7 +163,7 @@ export function MessagesReal({
   async function openConversation(id: string) {
     setActiveId(id);
     setMobileView("chat");
-    window.history.replaceState(null, "", `/student-dashboard/messages?c=${id}`);
+    window.history.replaceState(null, "", `${variant.base}?c=${id}`);
     setInbox((prev) => prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c)));
     const thread = await fetchThread(id);
     if (thread) setThreads((prev) => ({ ...prev, [id]: thread }));
@@ -215,6 +247,7 @@ export function MessagesReal({
       totalUnread={totalUnread}
       onOpen={(id) => void openConversation(id)}
       emptyInbox={inbox.length === 0}
+      subtitle={variant.subtitle}
     />
   );
 
@@ -226,9 +259,10 @@ export function MessagesReal({
       outgoing={outgoing[active.id] ?? []}
       selfId={selfId}
       nowMs={nowMs}
+      variant={variant}
       onBack={() => {
         setMobileView("list");
-        router.replace("/student-dashboard/messages", { scroll: false });
+        router.replace(variant.base, { scroll: false });
       }}
       onToggleFlag={(flag) => void toggleFlag(active, flag)}
       onSend={(body, files) => send(active.id, body, files)}
@@ -238,11 +272,11 @@ export function MessagesReal({
       <MessageSquare className="size-10 text-ensena-muted" />
       <p className="font-heading text-base font-semibold text-ensena-ink">{inbox.length ? "Pick a conversation" : "No messages yet"}</p>
       <p className="max-w-xs text-sm text-ensena-muted">
-        {inbox.length ? "Choose a conversation on the left to read and reply." : "Message a tutor from their profile to ask questions before you book."}
+        {inbox.length ? "Choose a conversation on the left to read and reply." : variant.emptyHint}
       </p>
-      {inbox.length === 0 && (
-        <Link href="/student-dashboard/find-a-tutor" className="mt-2 rounded-full bg-ensena-primary px-4 py-2 text-sm font-semibold text-white">
-          Find a tutor
+      {inbox.length === 0 && variant.emptyCta && (
+        <Link href={variant.emptyCta.href} className="mt-2 rounded-full bg-ensena-primary px-4 py-2 text-sm font-semibold text-white">
+          {variant.emptyCta.label}
         </Link>
       )}
     </div>
@@ -277,6 +311,7 @@ function ConversationList({
   totalUnread,
   onOpen,
   emptyInbox,
+  subtitle,
 }: {
   conversations: InboxConversation[];
   selfId: string;
@@ -289,12 +324,13 @@ function ConversationList({
   totalUnread: number;
   onOpen: (id: string) => void;
   emptyInbox: boolean;
+  subtitle: string;
 }) {
   return (
     <>
       <div className="p-4">
         <h1 className="font-heading text-xl font-semibold text-ensena-ink">Messages</h1>
-        <p className="mt-1 text-xs text-ensena-muted">Stay connected with your tutors and Ensena.</p>
+        <p className="mt-1 text-xs text-ensena-muted">{subtitle}</p>
         <div className="relative mt-3">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ensena-muted" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search conversations…" aria-label="Search conversations" className="h-10 w-full rounded-full border border-ensena-border bg-ensena-surface pl-9 pr-3 text-sm text-ensena-ink" />
@@ -377,10 +413,12 @@ function ChatPanel({
   outgoing,
   selfId,
   nowMs,
+  variant,
   onBack,
   onToggleFlag,
   onSend,
 }: {
+  variant: InboxVariant;
   conversation: InboxConversation;
   thread: Thread | undefined;
   outgoing: OutgoingMessage[];
@@ -393,6 +431,7 @@ function ChatPanel({
   const [menuOpen, setMenuOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const person = c.others[0];
+  const personLink = person ? variant.personHref(person) : null;
   const messages = thread?.messages ?? [];
 
   useEffect(() => {
@@ -422,7 +461,7 @@ function ChatPanel({
           <p className="truncate text-xs text-ensena-muted">{[roleLabel(person?.role ?? ""), c.contextLabel].filter((v, i, a) => v && a.indexOf(v) === i).join(" · ")}</p>
         </div>
         {c.nextLessonId && (
-          <Link href={`/student-dashboard/lessons?view=${c.nextLessonId}`} className="hidden h-9 shrink-0 items-center rounded-full border border-ensena-primary px-4 text-sm font-semibold text-ensena-primary hover:bg-ensena-primary/5 sm:flex">
+          <Link href={variant.lessonHref(c.nextLessonId)} className="hidden h-9 shrink-0 items-center rounded-full border border-ensena-primary px-4 text-sm font-semibold text-ensena-primary hover:bg-ensena-primary/5 sm:flex">
             View next class
           </Link>
         )}
@@ -432,13 +471,13 @@ function ChatPanel({
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-10 z-20 w-52 rounded-xl border border-ensena-border bg-ensena-surface p-1 shadow-lg" onMouseLeave={() => setMenuOpen(false)}>
-              {person?.role === "tutor" && (
-                <Link href={`/student-dashboard/tutors/${person.id}`} className="block rounded-lg px-3 py-2 text-sm text-ensena-ink hover:bg-ensena-bg-soft">
-                  View tutor profile
+              {personLink && (
+                <Link href={personLink.href} className="block rounded-lg px-3 py-2 text-sm text-ensena-ink hover:bg-ensena-bg-soft">
+                  {personLink.label}
                 </Link>
               )}
               {c.nextLessonId && (
-                <Link href={`/student-dashboard/lessons?view=${c.nextLessonId}`} className="block rounded-lg px-3 py-2 text-sm text-ensena-ink hover:bg-ensena-bg-soft sm:hidden">
+                <Link href={variant.lessonHref(c.nextLessonId)} className="block rounded-lg px-3 py-2 text-sm text-ensena-ink hover:bg-ensena-bg-soft sm:hidden">
                   View next class
                 </Link>
               )}

@@ -30,7 +30,7 @@ export function BookTutorReal({ tutor, generatedAtMs, studentSubjects }: { tutor
   const preferredSubject = tutor.subjects.find((s) => studentSubjects.some((w) => w.toLowerCase() === s.toLowerCase())) ?? tutor.subjects[0] ?? "";
 
   const [subject, setSubject] = useState(preferredSubject);
-  const [duration, setDuration] = useState(tutor.classDurations.includes(60) ? 60 : tutor.classDurations[0]);
+  const [duration, setDuration] = useState(tutor.defaultDuration);
   const [frequency, setFrequency] = useState<BookingFrequency>("oneTime");
   const [weeks, setWeeks] = useState(4);
   const [dateISO, setDateISO] = useState<string | null>(null);

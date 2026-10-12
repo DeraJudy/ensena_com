@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { analyzeCommunication, BLOCKED_MESSAGE_COPY } from "@/lib/communication-safety";
 import { ATTACHMENTS_BUCKET, isParticipant, loadInbox, loadThread, type InboxConversation, type Thread, type ThreadMessage } from "@/lib/messages-server";
 import { getSupabaseServerClient as getServiceRoleClient } from "@/lib/supabase";
+import { inTutorsGroupClass } from "@/lib/student-public-profile";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 // The real inbox. Messages are written with the service-role client AFTER
@@ -202,13 +203,17 @@ export async function startConversationWith(otherUserId: string): Promise<{ ok: 
 
   const [{ data: other }, { data: tutor }, { count: lessons }, { count: discovery }, { count: counselling }] = await Promise.all([
     admin.from("profiles").select("id, role, full_name").eq("id", otherUserId).maybeSingle(),
-    admin.from("tutor_profiles").select("application_status").eq("id", otherUserId).maybeSingle(),
+    admin.from("tutor_profiles").select("application_status, allow_new_student_messages").eq("id", otherUserId).maybeSingle(),
     admin.from("private_lessons").select("id", { count: "exact", head: true }).or(`and(student_id.eq.${me.id},tutor_id.eq.${otherUserId}),and(tutor_id.eq.${me.id},student_id.eq.${otherUserId})`),
     admin.from("discovery_sessions").select("id", { count: "exact", head: true }).or(`and(student_id.eq.${me.id},tutor_id.eq.${otherUserId}),and(tutor_id.eq.${me.id},student_id.eq.${otherUserId})`),
     admin.from("counselling_appointments").select("id", { count: "exact", head: true }).eq("student_id", me.id).eq("counsellor_id", otherUserId),
   ]);
   if (!other) return { ok: false, message: "You can't message this person." };
-  const hasBooking = (lessons ?? 0) + (discovery ?? 0) + (counselling ?? 0) > 0;
+  // A group class counts as a booking between its tutor and each student in it.
+  const inGroup =
+    (lessons ?? 0) + (discovery ?? 0) + (counselling ?? 0) === 0 &&
+    (me.role === "tutor" ? await inTutorsGroupClass(me.id, otherUserId) : other.role === "tutor" ? await inTutorsGroupClass(otherUserId, me.id) : false);
+  const hasBooking = (lessons ?? 0) + (discovery ?? 0) + (counselling ?? 0) > 0 || inGroup;
   const approvedTutor = other.role === "tutor" && tutor?.application_status === "approved";
   if (!hasBooking && !(me.role === "student" && approvedTutor)) return { ok: false, message: "You can only message tutors on Ensena or people you have a class with." };
 
@@ -227,6 +232,13 @@ export async function startConversationWith(otherUserId: string): Promise<{ ok: 
         return { ok: true, conversationId: c.id };
       }
     }
+  }
+
+  // Settings → Privacy → "Allow Messages from New Students": an existing
+  // thread (above) is never cut off, but a student with no booking can't
+  // open a new one.
+  if (!hasBooking && approvedTutor && tutor?.allow_new_student_messages === false) {
+    return { ok: false, message: `${other.full_name?.split(" ")[0] || "This tutor"} only takes messages from their current students. Book a lesson or discovery session to get in touch.` };
   }
 
   const { data: created, error } = await admin

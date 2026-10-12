@@ -178,11 +178,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   }
 
-  // Group classes: every session of each cohort the student is enrolled in.
-  const cohortIds = rows(enrollments)
+  // Group classes: every session of each cohort the student is enrolled in,
+  // or — for a tutor — of every class they teach.
+  let cohortIds = rows(enrollments)
     .filter((e) => !/cancel|waitlist/i.test((e.status as string) ?? ""))
     .map((e) => e.cohort_id as string)
     .filter(Boolean);
+  if (role === "tutor") {
+    const { data: taught } = await admin.from("group_classes").select("id").eq("tutor_id", userId).neq("status", "Cancelled");
+    const taughtIds = (taught ?? []).map((c) => c.id as string);
+    const { data: taughtCohorts } = taughtIds.length ? await admin.from("group_class_cohorts").select("id").in("group_class_id", taughtIds).neq("status", "Cancelled") : { data: [] };
+    cohortIds = (taughtCohorts ?? []).map((c) => c.id as string);
+  }
   if (cohortIds.length) {
     const [{ data: sessions }, { data: cohorts }] = await Promise.all([
       admin.from("group_class_sessions").select("id, cohort_id, session_number, scheduled_at, status").in("cohort_id", cohortIds).gte("scheduled_at", since),
@@ -200,7 +207,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         start,
         end: new Date(start.getTime() + 60 * 60_000),
         title: `Ensena: ${k?.title ?? k?.subject ?? "Group class"} — session ${s.session_number ?? ""}`.trim(),
-        location: `${base}/student-dashboard`,
+        location: `${base}${role === "tutor" ? `/tutor-dashboard/classroom/group/${k?.id ?? ""}` : "/student-dashboard"}`,
         status: statusOf(s.status),
       });
     }

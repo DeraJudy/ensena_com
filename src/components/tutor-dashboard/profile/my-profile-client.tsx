@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 
 import { SearchableTagField } from "@/components/sign-up/searchable-tag-field";
+import { TutorProfileReal } from "@/components/student-dashboard/live/tutor-profile-real";
+import { LiveAvailabilityEditor, summarizeAvailability } from "@/components/tutor-dashboard/profile/live-availability-editor";
 import { VerifiedTutorBadge } from "@/components/shared/verified-tutor-badge";
 import { isTutorVerified, saveTutorInformation, tutorDocumentTypes, useTutorIdentity, type TutorIdentity } from "@/components/tutor-dashboard/tutor-identity";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -62,6 +64,8 @@ import {
 } from "@/lib/tutor-dashboard-data";
 import { flattenLevelExpertise, saveTutorPublicProfile } from "@/lib/tutor-public-profile-store";
 import type { LevelExpertise } from "@/lib/tutor-signup-data";
+import type { TutorPublicProfile } from "@/lib/tutor-directory-server";
+import type { TutorAvailabilitySnapshot } from "@/lib/tutor-settings-server";
 import { languageSubjectOptions } from "@/lib/tutors";
 import { cn } from "@/lib/utils";
 
@@ -492,10 +496,28 @@ function experienceBucket(years: number): string {
   return "10+ years";
 }
 
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+
 function realProfileFrom(me: TutorIdentity, base: ReturnType<typeof useTutorPublicProfile>): ReturnType<typeof useTutorPublicProfile> {
-  const expertise = (Array.isArray(me.applicationData.levelExpertise) ? me.applicationData.levelExpertise : []) as LevelExpertise[];
+  const app = me.applicationData;
+  const expertise = (Array.isArray(app.levelExpertise) ? app.levelExpertise : []) as LevelExpertise[];
+  const spec = (app.academicSpecialization && typeof app.academicSpecialization === "object" ? app.academicSpecialization : {}) as Record<string, unknown>;
+  const rateMins = Number(app.rateDurationMins);
+  const trialMins = Number(app.trialDurationMins);
   return {
     ...base,
+    supportTypes: strings(app.supportTypes) as SupportTypeId[],
+    academicSpecialization: {
+      facultyIds: strings(spec.facultyIds),
+      departmentIds: strings(spec.departmentIds),
+      courseIds: strings(spec.courseIds),
+      fieldIds: strings(spec.fieldIds),
+      researchAreaIds: strings(spec.researchAreaIds),
+    },
+    hourlyDurationMins: rateMins === 30 || rateMins === 45 ? rateMins : 60,
+    discoveryDurationMins: trialMins === 15 ? 15 : 30,
+    discoveryPrice: Math.min(MAX_DISCOVERY_PRICE, Math.max(0, Number(app.trialPrice) || 0)),
+    documents: [],
     headline: me.headline,
     bio: me.bio,
     academicLevels: me.levels,
@@ -537,7 +559,14 @@ function RealDocumentsSummary({ me }: { me: TutorIdentity }) {
   );
 }
 
-export function MyProfileClient() {
+export interface LiveProfileData {
+  availability: TutorAvailabilitySnapshot;
+  /** What students see — the saved profile, even before approval. */
+  preview: TutorPublicProfile | null;
+  nowMs: number;
+}
+
+export function MyProfileClient({ live = null }: { live?: LiveProfileData | null } = {}) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [view, setView] = useState<ViewTab>(() => resolveTab(tabParam));
@@ -747,7 +776,12 @@ export function MyProfileClient() {
         languagesSpoken: languages,
         yearsExperience: experienceBucket(experienceYears),
         oneOnOnePrice: String(hourlyRate),
+        rateDurationMins: hourlyDuration,
         trialLessonEnabled: discoveryEnabled,
+        trialDurationMins: discoveryDuration,
+        trialPrice: String(discoveryPrice),
+        supportTypes,
+        academicSpecialization: sanitizeAcademicStructure(academicSpecialization),
       },
     });
     setSaving(false);
@@ -803,7 +837,8 @@ export function MyProfileClient() {
     hourlyRate, hourlyDuration, discoveryEnabled, discoveryDuration, discoveryPrice,
   };
 
-  const availabilitySummary = summarizeWeeklyAvailability(weeklyAvailability);
+  const availabilitySummary = live ? summarizeAvailability(live.availability.days, live.availability.vacationMode) : summarizeWeeklyAvailability(weeklyAvailability);
+  const blockedCount = live?.availability.blocked.length ?? 0;
 
   return (
     <div>
@@ -1066,7 +1101,9 @@ export function MyProfileClient() {
         </div>
       )}
 
-      {view === "Availability" && (
+      {view === "Availability" && live && <LiveAvailabilityEditor availability={live.availability} />}
+
+      {view === "Availability" && !live && (
         <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
           <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
             <h2 className="font-heading text-base font-semibold text-ensena-ink">Regular teaching hours</h2>
@@ -1153,10 +1190,23 @@ export function MyProfileClient() {
         </div>
       )}
 
-      {view === "Preview Profile" && (
+      {view === "Preview Profile" && live && (
+        <div className="mt-6">
+          {live.preview ? (
+            <>
+              <p className="mb-3 text-xs text-ensena-muted">Showing your last saved profile. Edits on the Public Profile tab appear here after you save them.</p>
+              <TutorProfileReal tutor={live.preview} initiallySaved={false} preview nowMs={live.nowMs} />
+            </>
+          ) : (
+            <p className="rounded-2xl border border-ensena-border bg-ensena-surface p-5 text-sm text-ensena-muted">We couldn&apos;t load your profile preview. Please refresh the page.</p>
+          )}
+        </div>
+      )}
+
+      {view === "Preview Profile" && !live && (
         <div className="mt-6 max-w-xl">
           <a
-            href={me.id ? "/tutor-dashboard/profile?tab=Preview Profile" : `/find-teachers/${dashboardTutor.slug}`}
+            href={`/find-teachers/${dashboardTutor.slug}`}
             target="_blank"
             rel="noreferrer"
             className="mb-4 flex items-center justify-center gap-1.5 rounded-full border border-ensena-border py-2.5 text-sm font-medium text-ensena-ink hover:bg-ensena-bg-soft"
@@ -1434,8 +1484,7 @@ export function MyProfileClient() {
             </div>
             <div className="mt-3 flex flex-col gap-2.5 text-sm">
               <div className="flex items-center justify-between"><span className="text-ensena-muted">Regular teaching hours</span><span className="font-medium text-ensena-ink">{availabilitySummary}</span></div>
-              <div className="flex items-center justify-between"><span className="text-ensena-muted">Blocked dates</span><span className="font-medium text-ensena-ink">None</span></div>
-              <div className="flex items-center justify-between"><span className="text-ensena-muted">Blocked times</span><span className="font-medium text-ensena-ink">None</span></div>
+              <div className="flex items-center justify-between"><span className="text-ensena-muted">Blocked time</span><span className="font-medium text-ensena-ink">{blockedCount > 0 ? `${blockedCount} upcoming` : "None"}</span></div>
             </div>
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-xs text-ensena-ink">
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-ensena-success" /> Your availability controls private bookings and discovery sessions.

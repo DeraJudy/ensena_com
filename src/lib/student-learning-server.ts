@@ -521,7 +521,7 @@ async function load(studentId: string): Promise<StudentLearningSnapshot> {
 async function loadRecommendedTutors(studentSubjects: string[], academicLevel: string): Promise<RecommendedTutor[]> {
   if (studentSubjects.length === 0) return [];
   const admin = getServiceRoleClient();
-  const { data: tutorRows } = await admin.from("tutor_profiles").select("id, application_data").eq("application_status", "approved");
+  const { data: tutorRows } = await admin.from("tutor_profiles").select("id, application_data").eq("application_status", "approved").eq("profile_public", true);
   const tutors = (tutorRows ?? []) as { id: string; application_data: Record<string, unknown> | null }[];
   if (tutors.length === 0) return [];
 

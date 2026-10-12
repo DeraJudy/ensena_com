@@ -28,6 +28,19 @@ export interface StudentPublicProfile {
 
 export type StudentProfileLookup = { status: "ok"; profile: StudentPublicProfile } | { status: "private"; firstName: string } | { status: "not-found" };
 
+/** Whether the student is (or was) enrolled in one of the tutor's group classes. */
+export async function inTutorsGroupClass(tutorId: string, studentId: string): Promise<boolean> {
+  const admin = getServiceRoleClient();
+  const { data: classes } = await admin.from("group_classes").select("id").eq("tutor_id", tutorId);
+  const classIds = (classes ?? []).map((c) => c.id as string);
+  if (!classIds.length) return false;
+  const { data: cohorts } = await admin.from("group_class_cohorts").select("id").in("group_class_id", classIds);
+  const cohortIds = (cohorts ?? []).map((c) => c.id as string);
+  if (!cohortIds.length) return false;
+  const { count } = await admin.from("group_class_enrollments").select("id", { count: "exact", head: true }).in("cohort_id", cohortIds).eq("student_id", studentId).neq("status", "Waitlisted");
+  return (count ?? 0) > 0;
+}
+
 export async function loadStudentProfileForTutor(tutorId: string, studentId: string): Promise<StudentProfileLookup> {
   const admin = getServiceRoleClient();
   const [{ data: person }, { data: student }] = await Promise.all([
@@ -44,6 +57,7 @@ export async function loadStudentProfileForTutor(tutorId: string, studentId: str
       admin.from("discovery_sessions").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId).eq("student_id", studentId),
     ]);
     if ((lessons ?? 0) + (discovery ?? 0) > 0) access = "booked";
+    else if (await inTutorsGroupClass(tutorId, studentId)) access = "booked";
   }
   if (!access) return { status: "private", firstName: name.split(" ")[0] };
 

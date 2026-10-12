@@ -46,6 +46,14 @@ export interface TutorPublicProfile extends TutorDirectoryEntry {
   weekly: WeeklyRange[];
   reviews: TutorPublicReview[];
   completedLessons: number;
+  /** Vacation Mode: the tutor has paused all new bookings. */
+  onVacation: boolean;
+  /** Only when the tutor shares their last-active status. */
+  lastActiveAt: string | null;
+  /** Students without a booking can message this tutor. */
+  acceptsNewMessages: boolean;
+  /** The tutor's preferred lesson length — preselected on the booking page. */
+  defaultDuration: number;
 }
 
 type Person = { id: string; full_name: string | null; avatar_url: string | null; created_at: string };
@@ -90,7 +98,9 @@ async function publishedRatings(tutorIds: string[]): Promise<Map<string, number[
 export async function listApprovedTutors(): Promise<TutorDirectoryEntry[]> {
   try {
     const admin = getServiceRoleClient();
-    const { data: tutorRows } = await admin.from("tutor_profiles").select("id, application_data").eq("application_status", "approved");
+    // A tutor who switched off Public Profile is hidden from browsing, but
+    // students they already teach can still open their profile directly.
+    const { data: tutorRows } = await admin.from("tutor_profiles").select("id, application_data").eq("application_status", "approved").eq("profile_public", true);
     const tutors = (tutorRows ?? []) as { id: string; application_data: Record<string, unknown> | null }[];
     if (tutors.length === 0) return [];
     const ids = tutors.map((t) => t.id);
@@ -106,16 +116,29 @@ export async function listApprovedTutors(): Promise<TutorDirectoryEntry[]> {
 }
 
 /**
- * The tutor's weekly teaching hours. tutor_weekly_availability wins when the
- * tutor has rows there; otherwise the hours they gave at registration.
+ * The tutor's BOOKABLE weekly hours — empty while Vacation Mode is on, which
+ * is what pauses new bookings and reschedules everywhere slots are checked.
  */
 export async function loadTutorWeekly(tutorId: string, applicationData?: Record<string, unknown> | null): Promise<WeeklyRange[]> {
+  const { data } = await getServiceRoleClient().from("tutor_profiles").select("vacation_mode").eq("id", tutorId).maybeSingle();
+  if (data?.vacation_mode === true) return [];
+  return loadTutorRegularHours(tutorId, applicationData);
+}
+
+/**
+ * The tutor's regular weekly teaching hours (ignoring Vacation Mode).
+ * tutor_weekly_availability wins when the tutor has rows there; otherwise
+ * the hours they gave at registration.
+ */
+export async function loadTutorRegularHours(tutorId: string, applicationData?: Record<string, unknown> | null): Promise<WeeklyRange[]> {
   const admin = getServiceRoleClient();
   const { data: rows } = await admin.from("tutor_weekly_availability").select("day_of_week, enabled, start_time, end_time").eq("tutor_id", tutorId);
-  const tableRanges = ((rows ?? []) as { day_of_week: number; enabled: boolean; start_time: string; end_time: string }[])
-    .filter((r) => r.enabled)
-    .map((r) => ({ dayOfWeek: r.day_of_week, start: r.start_time.slice(0, 5), end: r.end_time.slice(0, 5) }));
-  if (tableRanges.length > 0) return tableRanges;
+  const tableRows = (rows ?? []) as { day_of_week: number; enabled: boolean; start_time: string; end_time: string }[];
+  // Once the tutor has saved their hours in the dashboard, those rows are
+  // the whole truth — even if every day is switched off.
+  if (tableRows.length > 0) {
+    return tableRows.filter((r) => r.enabled).map((r) => ({ dayOfWeek: r.day_of_week, start: r.start_time.slice(0, 5), end: r.end_time.slice(0, 5) }));
+  }
 
   let app = applicationData;
   if (app === undefined) {
@@ -130,17 +153,23 @@ export async function loadTutorWeekly(tutorId: string, applicationData?: Record<
   });
 }
 
-export async function loadTutorProfile(tutorId: string): Promise<TutorPublicProfile | null> {
+// `opts.preview`: the tutor viewing their own profile — shown even before
+// they're approved, exactly as students will see it.
+export async function loadTutorProfile(tutorId: string, opts: { preview?: boolean } = {}): Promise<TutorPublicProfile | null> {
   try {
     if (!/^[0-9a-f-]{36}$/i.test(tutorId)) return null;
     const admin = getServiceRoleClient();
-    const { data: tutor } = await admin.from("tutor_profiles").select("id, application_status, application_data").eq("id", tutorId).maybeSingle();
-    if (!tutor || tutor.application_status !== "approved") return null;
+    const { data: tutor } = await admin
+      .from("tutor_profiles")
+      .select("id, application_status, application_data, vacation_mode, show_last_active, allow_new_student_messages")
+      .eq("id", tutorId)
+      .maybeSingle();
+    if (!tutor || (tutor.application_status !== "approved" && !opts.preview)) return null;
     const appData = (tutor.application_data as Record<string, unknown> | null) ?? null;
     const app = parseTutorApplication(appData);
 
-    const [{ data: person }, { data: reviewRows }, weekly, { count: completedLessons }] = await Promise.all([
-      admin.from("profiles").select("id, full_name, avatar_url, created_at").eq("id", tutorId).maybeSingle(),
+    const [{ data: person }, { data: reviewRows }, weekly, { count: completedLessons }, { data: settings }] = await Promise.all([
+      admin.from("profiles").select("id, full_name, avatar_url, created_at, last_seen_at").eq("id", tutorId).maybeSingle(),
       admin
         .from("reviews")
         .select("id, rating, comment, created_at, reviewer_id, tutor_reply")
@@ -148,8 +177,9 @@ export async function loadTutorProfile(tutorId: string): Promise<TutorPublicProf
         .eq("direction", "student_to_tutor")
         .eq("status", "published")
         .order("created_at", { ascending: false }),
-      loadTutorWeekly(tutorId, appData),
+      loadTutorRegularHours(tutorId, appData),
       admin.from("private_lessons").select("id", { count: "exact", head: true }).eq("tutor_id", tutorId).eq("status", "Completed"),
+      admin.from("account_settings").select("default_lesson_duration").eq("user_id", tutorId).maybeSingle(),
     ]);
     const reviews = (reviewRows ?? []) as { id: string; rating: number; comment: string | null; created_at: string; reviewer_id: string; tutor_reply: string | null }[];
     const { data: reviewers } = reviews.length
@@ -163,6 +193,8 @@ export async function loadTutorProfile(tutorId: string): Promise<TutorPublicProf
     };
 
     const durations = app.classDurations.map((d) => parseInt(d, 10)).filter((n) => Number.isFinite(n) && n >= 15 && n <= 240);
+    const classDurations = durations.length ? [...new Set(durations)].sort((a, b) => a - b) : [30, 45, 60, 90];
+    const preferred = Number(settings?.default_lesson_duration);
     return {
       ...toEntry(tutorId, (person as Person | null) ?? undefined, app, reviews.map((r) => r.rating)),
       levelExpertise: app.levelExpertise,
@@ -171,10 +203,14 @@ export async function loadTutorProfile(tutorId: string): Promise<TutorPublicProf
       institution: app.institution,
       fieldOfStudy: app.fieldOfStudy,
       cancellationPolicy: app.cancellationPolicy,
-      classDurations: durations.length ? [...new Set(durations)].sort((a, b) => a - b) : [30, 45, 60, 90],
+      classDurations,
       weekly,
       reviews: reviews.map((r) => ({ id: r.id, rating: r.rating, comment: r.comment ?? "", createdAt: r.created_at, reviewerName: shortName(r.reviewer_id), tutorReply: r.tutor_reply })),
       completedLessons: completedLessons ?? 0,
+      onVacation: tutor.vacation_mode === true,
+      lastActiveAt: tutor.show_last_active !== false ? ((person as { last_seen_at?: string | null } | null)?.last_seen_at ?? null) : null,
+      acceptsNewMessages: tutor.allow_new_student_messages !== false,
+      defaultDuration: classDurations.includes(preferred) ? preferred : classDurations.includes(60) ? 60 : classDurations[0],
     };
   } catch (error) {
     console.error("loadTutorProfile failed", error);

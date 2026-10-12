@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
+import { getSupabaseServerClient as getServiceRoleClient } from "@/lib/supabase";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { AdminRole } from "@/lib/admin-permissions-data";
@@ -37,9 +39,17 @@ export async function requireRole(role: AppRole): Promise<AuthedProfile | null> 
     redirect(`/sign-in?redirectTo=${encodeURIComponent(dashboardHrefByRole[role])}`);
   }
 
+  // Two-factor: an account with a verified authenticator app must finish
+  // the code step before any dashboard renders — this covers password and
+  // Google sign-in alike, since both land on a dashboard next.
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+    redirect(`/sign-in/verify?redirectTo=${encodeURIComponent(dashboardHrefByRole[role])}`);
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, full_name, email, avatar_url")
+    .select("id, role, full_name, email, avatar_url, last_seen_at")
     .eq("id", user.id)
     .single();
 
@@ -50,6 +60,15 @@ export async function requireRole(role: AppRole): Promise<AuthedProfile | null> 
   const profileRole = profile.role as AppRole;
   if (profileRole !== role) {
     redirect(dashboardHrefByRole[profileRole] ?? "/sign-in");
+  }
+
+  // "Last active" (shown on a tutor's public profile when they allow it),
+  // refreshed at most every 5 minutes, after the response is sent.
+  const lastSeenMs = profile.last_seen_at ? new Date(profile.last_seen_at).getTime() : 0;
+  if (Date.now() - lastSeenMs > 5 * 60_000) {
+    after(async () => {
+      await getServiceRoleClient().from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("id", profile.id);
+    });
   }
 
   return { id: profile.id, role: profileRole, fullName: profile.full_name, email: profile.email, avatarUrl: profile.avatar_url };
