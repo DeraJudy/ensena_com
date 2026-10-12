@@ -147,7 +147,7 @@ export function AdminClassroomObserveClient({ groupClass }: { groupClass: GroupC
                     {liveState.students.map((s) => (
                       <li key={s.id} className="flex items-center gap-3 rounded-xl border border-ensena-border p-2.5 text-sm">
                         <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-ensena-bg-soft">
-                          <Image src={s.image} alt={s.name} fill className="object-cover" />
+                          <Image src={s.image} alt={s.name} fill sizes="32px" className="object-cover" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium text-ensena-ink">{s.name}</p>

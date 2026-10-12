@@ -6,10 +6,12 @@ import { ChevronLeft, Search, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAdminSession } from "@/hooks/use-admin-session";
+import { fileManualSupportTicket } from "@/lib/actions/support";
 import { initialAdminStudents } from "@/lib/admin-data";
 import { getPlatformUsers } from "@/lib/admin-platform-users-store";
 import { submitSupportRequest } from "@/lib/support-store";
 import { SUPPORT_CONTEXT_CONFIG, type SupportChannel, type SupportContext, type SupportPriority, type SupportUserRole } from "@/lib/support-data";
+import type { SupportDirectoryEntry, SupportStaffOption } from "@/lib/support-server";
 import { getAdminTutors } from "@/lib/tutor-verification-store";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +21,7 @@ const channelOptions: SupportChannel[] = ["Phone", "WhatsApp", "In Person", "Ema
 const priorityOptions: SupportPriority[] = ["Low", "Normal", "High", "Urgent"];
 
 interface DirectoryMatch {
+  id: string;
   name: string;
   email: string;
   role: SupportUserRole;
@@ -31,7 +34,9 @@ interface DirectoryMatch {
 // self-service "Contact Support" form already writes to, just with
 // source: "Manual" and a channel/filedByStaffName attached, so it opens
 // into the identical detail page.
-export function AdminSupportNewClient() {
+// `live` = real users to search and real staff to assign; the ticket is then
+// created in the database. Without it this files into the browser demo store.
+export function AdminSupportNewClient({ live }: { live?: { directory: SupportDirectoryEntry[]; staff: SupportStaffOption[] } } = {}) {
   const router = useRouter();
   const session = useAdminSession();
 
@@ -52,13 +57,17 @@ export function AdminSupportNewClient() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const directory: DirectoryMatch[] = useMemo(() => [
-    ...initialAdminStudents.map((s) => ({ name: s.name, email: s.email, role: "Student" as const })),
-    ...getAdminTutors().map((t) => ({ name: t.name, email: t.email, role: "Tutor" as const })),
-  ], []);
-  const matches = query.trim().length === 0 ? [] : directory.filter((d) => d.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 6);
+  const directory: DirectoryMatch[] = useMemo(() => live ? live.directory : [
+    ...initialAdminStudents.map((s) => ({ id: s.name, name: s.name, email: s.email, role: "Student" as const })),
+    ...getAdminTutors().map((t) => ({ id: t.name, name: t.name, email: t.email, role: "Tutor" as const })),
+  ], [live]);
+  const needle = query.trim().toLowerCase();
+  const matches = needle.length === 0 ? [] : directory.filter((d) => d.name.toLowerCase().includes(needle) || d.email.toLowerCase().includes(needle)).slice(0, 6);
 
-  const staffOptions = useMemo(() => getPlatformUsers().filter((u) => STAFF_ROLES.includes(u.role)).map((u) => u.name), []);
+  const staffOptions: { id: string; name: string }[] = useMemo(
+    () => live ? live.staff : getPlatformUsers().filter((u) => STAFF_ROLES.includes(u.role)).map((u) => ({ id: u.name, name: u.name })),
+    [live]
+  );
 
   // The category list follows the same real, shared system every other
   // Support surface uses (SUPPORT_CONTEXT_CONFIG) — a Student requester sees
@@ -78,6 +87,29 @@ export function AdminSupportNewClient() {
     if (!canSubmit || !requesterName) return;
     setSubmitting(true);
     setError(null);
+    if (live) {
+      const result = await fileManualSupportTicket({
+        mode,
+        requesterId: selected?.id,
+        externalName,
+        externalEmail,
+        externalPhone,
+        externalRole,
+        category,
+        subject,
+        message,
+        channel,
+        priority,
+        assignedStaffId: assignedStaff || undefined,
+      });
+      if (!result.ok) {
+        setError(result.message);
+        setSubmitting(false);
+        return;
+      }
+      router.push(`/admin/support/${result.id}`);
+      return;
+    }
     try {
       const request = await submitSupportRequest({
         userName: requesterName,
@@ -152,14 +184,14 @@ export function AdminSupportNewClient() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search by name…"
+                  placeholder="Search by name or email…"
                   className="h-10 w-full rounded-full border border-ensena-border pl-9 pr-4 text-sm"
                 />
                 {matches.length > 0 && (
                   <div className="mt-1.5 flex flex-col gap-1 rounded-xl border border-ensena-border bg-ensena-surface p-1.5 shadow-sm">
                     {matches.map((m) => (
                       <button
-                        key={`${m.role}-${m.name}`}
+                        key={`${m.role}-${m.id}`}
                         type="button"
                         onClick={() => { setSelected(m); setQuery(""); setCategory(""); }}
                         className="flex items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm hover:bg-ensena-bg-soft"
@@ -252,7 +284,7 @@ export function AdminSupportNewClient() {
             <span className="text-xs font-medium text-ensena-muted">Assign to</span>
             <select value={assignedStaff} onChange={(e) => setAssignedStaff(e.target.value)} className="h-10 rounded-lg border border-ensena-border px-3 text-sm">
               <option value="">Unassigned</option>
-              {staffOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              {staffOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </label>
         </div>

@@ -148,7 +148,7 @@ export function StudentDiscoverySessionsClient() {
         <div className="mt-5 flex flex-col gap-3">
           {upcoming.map((d) => (
             <div key={d.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-ensena-border bg-ensena-surface p-4">
-              <div className="relative size-11 shrink-0 overflow-hidden rounded-full"><Image src={d.tutorImage} alt={d.tutor} fill className="object-cover" /></div>
+              <div className="relative size-11 shrink-0 overflow-hidden rounded-full"><Image src={d.tutorImage} alt={d.tutor} fill sizes="44px" className="object-cover" /></div>
               <div className="min-w-[140px] flex-1">
                 <p className="text-sm font-semibold text-ensena-ink">{d.tutor}</p>
                 <p className="text-xs text-ensena-muted">{d.subject}</p>
@@ -182,7 +182,7 @@ export function StudentDiscoverySessionsClient() {
           {completed.map((d) => {
             return (
               <div key={d.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-ensena-border bg-ensena-surface p-4">
-                <div className="relative size-11 shrink-0 overflow-hidden rounded-full"><Image src={d.tutorImage} alt={d.tutor} fill className="object-cover" /></div>
+                <div className="relative size-11 shrink-0 overflow-hidden rounded-full"><Image src={d.tutorImage} alt={d.tutor} fill sizes="44px" className="object-cover" /></div>
                 <div className="min-w-[140px] flex-1">
                   <p className="text-sm font-semibold text-ensena-ink">{d.tutor}</p>
                   <p className="text-xs text-ensena-muted">{d.subject} · {d.date}</p>
@@ -217,7 +217,7 @@ export function StudentDiscoverySessionsClient() {
         <div className="mt-5 flex flex-col gap-3">
           {cancelled.map((d) => (
             <div key={d.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-ensena-border bg-ensena-surface p-4">
-              <div className="relative size-11 shrink-0 overflow-hidden rounded-full"><Image src={d.tutorImage} alt={d.tutor} fill className="object-cover" /></div>
+              <div className="relative size-11 shrink-0 overflow-hidden rounded-full"><Image src={d.tutorImage} alt={d.tutor} fill sizes="44px" className="object-cover" /></div>
               <div className="min-w-[140px] flex-1">
                 <p className="text-sm font-semibold text-ensena-ink">{d.tutor}</p>
                 <p className="text-xs text-ensena-muted">{d.subject} · {d.date}</p>
@@ -234,7 +234,7 @@ export function StudentDiscoverySessionsClient() {
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {recommendedTutors.map((t) => (
             <div key={t.id} className="flex items-center gap-3 rounded-2xl border border-ensena-border bg-ensena-surface p-4">
-              <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill className="object-cover" /></div>
+              <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill sizes="48px" className="object-cover" /></div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ensena-ink">{t.name}</p>
                 <p className="truncate text-xs text-ensena-muted">{t.subject}</p>

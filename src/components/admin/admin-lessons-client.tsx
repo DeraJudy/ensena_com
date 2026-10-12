@@ -123,7 +123,7 @@ export function AdminLessonsClient() {
                   >
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
-                        <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={b.studentImage} alt={b.student} fill className="object-cover" /></div>
+                        <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={b.studentImage} alt={b.student} fill sizes="28px" className="object-cover" /></div>
                         <span className="text-ensena-ink">{b.student}</span>
                       </div>
                     </td>

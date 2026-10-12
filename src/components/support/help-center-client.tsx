@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Flag, MessageSquare, Search, Send } from "lucide-react";
+import { BookOpen, ChevronDown, Flag, LifeBuoy, Mail, Search, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { HelpArticle } from "@/lib/help-articles-data";
+import { SUPPORT_EMAIL } from "@/lib/support-data";
 import type { FaqItem } from "@/lib/tutor-dashboard-data";
 import { cn } from "@/lib/utils";
 
@@ -49,11 +50,6 @@ export function HelpCenterClient({
 }) {
   const [query, setQuery] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [toast, setToast] = useState<string | null>(null);
-  function flash(message: string) {
-    setToast(message);
-    setTimeout(() => setToast((cur) => (cur === message ? null : cur)), 2500);
-  }
 
   const orderedFaqs = highlightContext
     ? [...faqItems].sort((a, b) => (b.tags?.includes(highlightContext) ? 1 : 0) - (a.tags?.includes(highlightContext) ? 1 : 0))
@@ -61,7 +57,9 @@ export function HelpCenterClient({
 
   const q = query.trim().toLowerCase();
   const filteredFaqs = orderedFaqs.filter((f) => !q || f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q));
-  const filteredArticles = knowledgeBaseArticles.filter((a) => !q || a.title.toLowerCase().includes(q) || a.shortDescription.toLowerCase().includes(q));
+  const filteredArticles = knowledgeBaseArticles.filter(
+    (a) => !q || a.title.toLowerCase().includes(q) || a.shortDescription.toLowerCase().includes(q) || a.category.toLowerCase().includes(q)
+  );
 
   return (
     <div>
@@ -131,15 +129,9 @@ export function HelpCenterClient({
         <div className="flex flex-col gap-5">
           <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
             <h2 className="flex items-center gap-2 font-heading text-sm font-semibold text-ensena-ink">
-              <MessageSquare className="size-4 text-ensena-primary" /> Live Chat Support
+              <LifeBuoy className="size-4 text-ensena-primary" /> Submit a Ticket
             </h2>
-            <p className="mt-2 text-xs text-ensena-muted">Our team is online now and typically replies within a few minutes.</p>
-            <Button onClick={() => flash("Live chat isn't available in this demo yet. Please report an issue instead.")} className="mt-3 h-9 w-full rounded-full bg-ensena-primary text-xs font-semibold text-white hover:bg-ensena-primary-hover">Chat Now</Button>
-          </div>
-
-          <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
-            <h2 className="font-heading text-sm font-semibold text-ensena-ink">Submit a Ticket</h2>
-            <p className="mt-1 text-xs text-ensena-muted">Tell us what you need help with and we&apos;ll get back to you.</p>
+            <p className="mt-1 text-xs text-ensena-muted">Tell us what you need help with. Our support team will reply here and by email.</p>
             <Button nativeButton={false} render={<Link href={contactSupportHref} />} className="mt-2.5 h-9 w-full rounded-full bg-ensena-primary text-xs font-semibold text-white hover:bg-ensena-primary-hover">
               <Send className="size-3.5" /> Submit Ticket
             </Button>
@@ -149,7 +141,7 @@ export function HelpCenterClient({
             <h2 className="flex items-center gap-2 font-heading text-sm font-semibold text-ensena-ink">
               <Flag className="size-4 text-rose-500" /> Report an Issue
             </h2>
-            <p className="mt-1 text-xs text-ensena-muted">Something not working right? Let us know.</p>
+            <p className="mt-1 text-xs text-ensena-muted">A page, button, video or upload not working? Report it and it goes straight to our team.</p>
             <Button
               variant="outline"
               nativeButton={false}
@@ -170,16 +162,18 @@ export function HelpCenterClient({
             </div>
           )}
 
-          <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5 text-xs text-ensena-muted">
-            <p className="font-semibold text-ensena-ink">Email Support</p>
-            <p className="mt-1">support@ensena.co</p>
+          <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
+            <h2 className="flex items-center gap-2 font-heading text-sm font-semibold text-ensena-ink">
+              <Mail className="size-4 text-ensena-primary" /> Technical Support by Email
+            </h2>
+            <p className="mt-1 text-xs text-ensena-muted">Prefer email? Write to us and include your booking or ticket reference if you have one.</p>
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="mt-2.5 flex h-9 w-full items-center justify-center rounded-full border border-ensena-border text-xs font-semibold text-ensena-primary hover:bg-ensena-bg-soft">
+              {SUPPORT_EMAIL}
+            </a>
           </div>
         </div>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ensena-ink px-4 py-2 text-sm text-white shadow-lg">{toast}</div>
-      )}
     </div>
   );
 }

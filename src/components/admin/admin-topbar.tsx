@@ -109,7 +109,7 @@ export function AdminTopbar() {
               className="flex h-10 items-center gap-2 rounded-full border border-ensena-border bg-ensena-surface py-1 pl-1 pr-3"
             >
               <span className="relative size-8 shrink-0 overflow-hidden rounded-full">
-                <Image src={isCounselling ? counsellor.image : admin.image ?? "/teacher-4.jpg.png"} alt={isCounselling ? counsellor.name : admin.name} fill className="object-cover" />
+                <Image src={isCounselling ? counsellor.image : admin.image ?? "/teacher-4.jpg.png"} alt={isCounselling ? counsellor.name : admin.name} fill sizes="32px" className="object-cover" />
               </span>
               <span className="hidden text-left sm:block">
                 <span className="block text-sm font-medium leading-tight text-ensena-ink">{isCounselling ? counsellor.name : admin.name}</span>

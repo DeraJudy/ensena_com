@@ -80,7 +80,7 @@ export function StepTutorProfile({
         <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="relative size-24 shrink-0 overflow-hidden rounded-full bg-ensena-bg-soft">
             {photoPreview ? (
-              <Image src={photoPreview} alt="Profile preview" fill className="object-cover" />
+              <Image src={photoPreview} alt="Profile preview" fill sizes="96px" className="object-cover" />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-ensena-muted">
                 <UserIcon className="size-8" />

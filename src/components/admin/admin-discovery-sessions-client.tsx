@@ -117,7 +117,7 @@ export function AdminDiscoverySessionsClient() {
                 <tr key={d.id} onClick={(e) => openSession(d.id, e)} className="cursor-pointer border-b border-ensena-border last:border-0 hover:bg-ensena-bg-soft">
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
-                      <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={d.studentImage} alt={d.student} fill className="object-cover" /></div>
+                      <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={d.studentImage} alt={d.student} fill sizes="28px" className="object-cover" /></div>
                       <span className="text-ensena-ink">{d.student}</span>
                     </div>
                   </td>

@@ -191,7 +191,7 @@ export function StudentProfileClient() {
           <div className="flex items-center gap-4">
             <div className="relative size-20 shrink-0">
               <div className="relative size-20 overflow-hidden rounded-full">
-                <Image src={photoUrl} alt={me.name} fill unoptimized={photoUrl.startsWith("blob:")} className="object-cover" />
+                <Image src={photoUrl} alt={me.name} fill sizes="80px" unoptimized={photoUrl.startsWith("blob:")} className="object-cover" />
               </div>
               <div className="absolute -bottom-1 -right-1">
                 <button

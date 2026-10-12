@@ -179,7 +179,7 @@ export function DashboardSidebar() {
       <div className="mx-4 rounded-2xl bg-ensena-bg-soft p-3">
         <div className="flex items-center gap-3">
           <div className="relative size-11 shrink-0 overflow-hidden rounded-full">
-            <Image src={me.image} alt={me.name} fill className="object-cover" />
+            <Image src={me.image} alt={me.name} fill sizes="44px" className="object-cover" />
           </div>
           <div className="min-w-0">
             <p className="flex items-center gap-1 truncate text-sm font-semibold text-ensena-ink">

@@ -179,7 +179,7 @@ export function ProfileEditorClient() {
           <div className="flex flex-wrap items-center gap-6">
             <div className="text-center">
               <div className="relative mx-auto size-20 overflow-hidden rounded-full">
-                <Image src={photoPreview ?? dashboardTutor.image} alt="Profile" fill className="object-cover" />
+                <Image src={photoPreview ?? dashboardTutor.image} alt="Profile" fill sizes="80px" className="object-cover" />
               </div>
               <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoFileSelected} className="hidden" />
               <button type="button" onClick={() => photoInputRef.current?.click()} className="mt-2 flex items-center gap-1 text-xs font-medium text-ensena-primary">

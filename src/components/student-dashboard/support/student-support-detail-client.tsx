@@ -5,14 +5,15 @@ import { ChevronLeft } from "lucide-react";
 
 import { SupportConversation } from "@/components/support/support-conversation";
 import { useSupportRequests } from "@/hooks/use-support-requests";
+import type { SupportRequest } from "@/lib/support-data";
 import { dashboardStudent } from "@/lib/student-dashboard-data";
 
-export function StudentSupportDetailClient({ id }: { id: string }) {
+export function StudentSupportDetailClient({ id, live, userName }: { id: string; live?: SupportRequest | null; userName?: string }) {
   const requests = useSupportRequests();
   // A student may only view their own requests — matches this app's
   // established route-level ownership check pattern (e.g. the counselling
   // detail page's studentName scoping).
-  const request = requests.find((r) => r.id === id && r.userName === dashboardStudent.name);
+  const request = live !== undefined ? live : requests.find((r) => r.id === id && r.userName === dashboardStudent.name);
 
   if (!request) {
     return (
@@ -38,7 +39,7 @@ export function StudentSupportDetailClient({ id }: { id: string }) {
         <ChevronLeft className="size-4" /> Back to Support
       </Link>
       <div className="mt-3">
-        <SupportConversation request={request} currentUserName={dashboardStudent.name} relatedRecordHref={relatedRecordHref} />
+        <SupportConversation request={request} currentUserName={userName ?? dashboardStudent.name} relatedRecordHref={relatedRecordHref} live={live !== undefined} />
       </div>
     </div>
   );

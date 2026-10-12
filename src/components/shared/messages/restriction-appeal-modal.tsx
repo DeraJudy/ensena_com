@@ -5,6 +5,8 @@ import { CheckCircle2 } from "lucide-react";
 
 import { Modal } from "@/components/ui/modal";
 import { markRestrictionUnderReviewResolved, type ActorRole, type RestrictionRecord } from "@/lib/moderation-store";
+import { submitSupportTicket } from "@/lib/actions/support";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { submitSupportRequest } from "@/lib/support-store";
 
 // The "Contact Internal Support" step of the restriction notice — submits a
@@ -45,19 +47,27 @@ export function RestrictionAppealModal({
       restriction.caseReportId ? `Related case: ${restriction.caseReportId}` : "",
     ].filter(Boolean).join("\n");
 
-    const ticket = await submitSupportRequest({
-      userName: restriction.actorName,
-      userEmail: actorEmail,
-      userRole: actorRole,
-      context: "account",
+    const ticketInput = {
+      context: "account" as const,
       category: "Appeal a messaging restriction or suspension",
       message,
-      relatedRecordType: "restriction",
+      relatedRecordType: "restriction" as const,
       relatedRecordId: restriction.id,
       relatedRecordLabel: `${restriction.type} — ${restriction.durationLabel}`,
-    });
-    await markRestrictionUnderReviewResolved(restriction, ticket.id);
-    setSubmittedId(ticket.id);
+    };
+    let ticketId: string;
+    if (isSupabaseConfigured()) {
+      const result = await submitSupportTicket(ticketInput);
+      if (!result.ok) {
+        setSubmitting(false);
+        return;
+      }
+      ticketId = result.id;
+    } else {
+      ticketId = (await submitSupportRequest({ ...ticketInput, userName: restriction.actorName, userEmail: actorEmail, userRole: actorRole })).id;
+    }
+    await markRestrictionUnderReviewResolved(restriction, ticketId);
+    setSubmittedId(ticketId);
     setSubmitting(false);
   }
 

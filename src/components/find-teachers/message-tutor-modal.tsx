@@ -55,7 +55,7 @@ export function MessageTutorModal({
         <div className="flex items-center justify-between border-b border-ensena-border px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="relative size-10 shrink-0 overflow-hidden rounded-full">
-              <Image src={tutor.image} alt={tutor.name} fill className="object-cover" />
+              <Image src={tutor.image} alt={tutor.name} fill sizes="40px" className="object-cover" />
             </div>
             <div>
               <h2 id="message-tutor-title" className="font-heading text-sm font-semibold text-ensena-ink">

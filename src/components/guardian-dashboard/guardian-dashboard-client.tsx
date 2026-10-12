@@ -86,7 +86,7 @@ function Avatar({ name, image, size }: { name: string; image: string | null; siz
         size === "lg" ? "size-14 text-lg" : "size-10 text-sm"
       )}
     >
-      {image ? <Image src={image} alt={name} fill className="object-cover" /> : initialsOf(name)}
+      {image ? <Image src={image} alt={name} fill sizes={size === "lg" ? "56px" : "40px"} className="object-cover" /> : initialsOf(name)}
     </div>
   );
 }
@@ -240,7 +240,7 @@ export function GuardianDashboardClient() {
               <div className="mt-3 flex flex-col gap-3">
                 {studentUpcomingLessons.map((lesson) => (
                   <div key={lesson.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-ensena-border p-3">
-                    <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={lesson.tutorImage} alt={lesson.tutor} fill className="object-cover" /></div>
+                    <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={lesson.tutorImage} alt={lesson.tutor} fill sizes="40px" className="object-cover" /></div>
                     <div className="min-w-[140px] flex-1">
                       <p className="text-sm font-semibold text-ensena-ink">{lesson.subject}</p>
                       <p className="text-xs text-ensena-muted">{lesson.tutor} · {lesson.date} · {lesson.time}</p>
@@ -370,7 +370,7 @@ export function GuardianDashboardClient() {
               </p>
               <p className="text-xs text-ensena-muted">{child.firstName}&apos;s current tutor</p>
               <div className="mt-2 flex items-center gap-2.5">
-                <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={demoChild.tutorImage} alt={demoChild.tutor} fill className="object-cover" /></div>
+                <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={demoChild.tutorImage} alt={demoChild.tutor} fill sizes="36px" className="object-cover" /></div>
                 {!isTutorVerifiedByName(demoChild.tutor) && <span className="text-xs text-ensena-muted">Not yet verified</span>}
               </div>
             </div>

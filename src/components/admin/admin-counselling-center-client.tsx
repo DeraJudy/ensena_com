@@ -748,7 +748,7 @@ function DashboardSection({
                   <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", a.tagColor)}>{a.tag}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-2">
-                  <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.image} alt={a.student} fill className="object-cover" /></div>
+                  <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.image} alt={a.student} fill sizes="32px" className="object-cover" /></div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ensena-ink">{a.student}</p>
                     <p className="truncate text-[11px] text-ensena-muted">{a.level}</p>
@@ -780,7 +780,7 @@ function DashboardSection({
               <li key={r.id} className={cn("rounded-xl border-l-4 bg-ensena-bg-soft p-3", r.priority === "High" ? "border-rose-500" : "border-amber-500")}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={r.image} alt={r.student} fill className="object-cover" /></div>
+                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={r.image} alt={r.student} fill sizes="32px" className="object-cover" /></div>
                     <div>
                       <p className="text-sm font-medium text-ensena-ink">{r.student}</p>
                       <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-semibold", r.priority === "High" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700")}>{r.priority} Risk</span>
@@ -848,7 +848,7 @@ function DashboardSection({
                   <tr key={c.id} className="border-b border-ensena-border text-xs last:border-0">
                     <td className="py-2.5 pr-3">
                       <div className="flex items-center gap-2">
-                        <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill className="object-cover" /></div>
+                        <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill sizes="28px" className="object-cover" /></div>
                         <span className="font-medium text-ensena-ink">{c.student}</span>
                       </div>
                     </td>
@@ -936,7 +936,7 @@ function AppointmentsSection({
                 <tr key={a.id} onClick={() => onSelect(a.id)} className={cn("cursor-pointer border-b border-ensena-border last:border-0 hover:bg-ensena-bg-soft", selected.id === a.id && "bg-ensena-primary/5")}>
                   <td className="py-2.5 pr-3">
                     <div className="flex items-center gap-2">
-                      <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={a.image} alt={a.student} fill className="object-cover" /></div>
+                      <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={a.image} alt={a.student} fill sizes="28px" className="object-cover" /></div>
                       <span className="font-medium text-ensena-ink">{a.student}</span>
                     </div>
                   </td>
@@ -1059,7 +1059,7 @@ function StudentsSection({
               <tr key={c.id} onClick={() => onView(c.id)} className="cursor-pointer border-b border-ensena-border last:border-0 hover:bg-ensena-bg-soft">
                 <td className="py-3 pr-3">
                   <div className="flex items-center gap-2">
-                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill className="object-cover" /></div>
+                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill sizes="32px" className="object-cover" /></div>
                     <div>
                       <p className="font-medium text-ensena-ink">{c.student}</p>
                       <p className="text-xs text-ensena-muted">{c.level}</p>
@@ -1093,7 +1093,7 @@ function StudentCaseModalBody({
   return (
     <div className="flex flex-col gap-3 text-sm">
       <div className="flex items-center gap-3">
-        <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={studentCase.image} alt={studentCase.student} fill className="object-cover" /></div>
+        <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={studentCase.image} alt={studentCase.student} fill sizes="48px" className="object-cover" /></div>
         <div>
           <p className="font-semibold text-ensena-ink">{studentCase.student}</p>
           <p className="text-xs text-ensena-muted">{studentCase.level} · {studentCase.primaryGoal}</p>
@@ -1208,7 +1208,7 @@ function IntakeFormsSection({
           <button key={f.id} type="button" onClick={() => onView(f.id)} className="rounded-xl border border-ensena-border p-4 text-left hover:bg-ensena-bg-soft">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={f.image} alt={f.student} fill className="object-cover" /></div>
+                <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={f.image} alt={f.student} fill sizes="36px" className="object-cover" /></div>
                 <div>
                   <p className="text-sm font-medium text-ensena-ink">{f.student}</p>
                   <p className="text-xs text-ensena-muted">{f.level}</p>
@@ -1236,7 +1236,7 @@ function AiInsightsSection({ highRiskCases, flash }: { highRiskCases: StudentCas
         <ul className="mt-3 flex flex-col gap-2">
           {highRiskCases.map((c) => (
             <li key={c.id} className="flex items-center gap-2 rounded-xl border-l-4 border-rose-500 bg-ensena-bg-soft p-2.5 text-xs">
-              <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill className="object-cover" /></div>
+              <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill sizes="32px" className="object-cover" /></div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ensena-ink">{c.student}</p>
                 <p className="text-ensena-muted">Attendance {c.attendancePct}% · Homework {c.homeworkPct}%</p>
@@ -1274,7 +1274,7 @@ function AiInsightsSection({ highRiskCases, flash }: { highRiskCases: StudentCas
         <ul className="mt-3 flex flex-col gap-2">
           {aiPredictions.map((p) => (
             <li key={p.student} className="flex items-center gap-2 text-xs">
-              <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={p.image} alt={p.student} fill className="object-cover" /></div>
+              <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={p.image} alt={p.student} fill sizes="28px" className="object-cover" /></div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ensena-ink">{p.student}</p>
                 <p className={cn(p.tone === "positive" ? "text-ensena-success" : "text-amber-700")}>{p.prediction}</p>
@@ -1330,7 +1330,7 @@ function ActionPlansSection({
                 <tr key={p.id} onClick={() => onSelect(p.id)} className={cn("cursor-pointer border-b border-ensena-border last:border-0 hover:bg-ensena-bg-soft", selected?.id === p.id && "bg-ensena-primary/5")}>
                   <td className="py-3 pr-3">
                     <div className="flex items-center gap-2">
-                      <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={p.image} alt={p.student} fill className="object-cover" /></div>
+                      <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={p.image} alt={p.student} fill sizes="28px" className="object-cover" /></div>
                       <span className="font-medium text-ensena-ink">{p.student}</span>
                     </div>
                   </td>
@@ -1353,7 +1353,7 @@ function ActionPlansSection({
       {selected && (
         <div className="rounded-2xl border border-ensena-border p-5">
           <div className="flex items-center gap-2.5">
-            <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={selected.image} alt={selected.student} fill className="object-cover" /></div>
+            <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={selected.image} alt={selected.student} fill sizes="40px" className="object-cover" /></div>
             <div>
               <p className="font-heading text-sm font-semibold text-ensena-ink">{selected.student}</p>
               <p className="text-xs text-ensena-muted">{selected.goal}</p>
@@ -1437,7 +1437,7 @@ function NotesSection({ cases, onAddNote }: { cases: StudentCase[]; onAddNote: (
         <div key={c.id} className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill className="object-cover" /></div>
+              <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={c.image} alt={c.student} fill sizes="36px" className="object-cover" /></div>
               <div>
                 <p className="font-heading text-sm font-semibold text-ensena-ink">{c.student}</p>
                 <p className="text-xs text-ensena-muted">{c.level}</p>
@@ -1490,7 +1490,7 @@ function FollowUpsSection({
               <tr key={f.id} className="border-b border-ensena-border text-xs last:border-0">
                 <td className="py-3 pr-3">
                   <div className="flex items-center gap-2">
-                    <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={f.image} alt={f.student} fill className="object-cover" /></div>
+                    <div className="relative size-7 shrink-0 overflow-hidden rounded-full"><Image src={f.image} alt={f.student} fill sizes="28px" className="object-cover" /></div>
                     <span className="font-medium text-ensena-ink">{f.student}</span>
                   </div>
                 </td>
@@ -1559,7 +1559,7 @@ function MessagesSection() {
       <ul className="mt-3 flex flex-col divide-y divide-ensena-border">
         {threads.map((t) => (
           <li key={t.name} className="flex items-center gap-3 py-3">
-            <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill className="object-cover" /></div>
+            <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill sizes="40px" className="object-cover" /></div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-ensena-ink">{t.name}</p>
               <p className="truncate text-xs text-ensena-muted">{t.last}</p>

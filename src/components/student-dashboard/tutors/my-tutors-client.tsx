@@ -33,7 +33,7 @@ export function MyTutorsClient() {
           <div key={tutor.id} className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
             <Link href={`/student-dashboard/tutors/${tutor.id}`} className="flex items-center gap-3">
               <div className="relative size-14 shrink-0 overflow-hidden rounded-full">
-                <Image src={tutor.image} alt={tutor.name} fill className="object-cover" />
+                <Image src={tutor.image} alt={tutor.name} fill sizes="56px" className="object-cover" />
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-ensena-ink">{tutor.name}</p>

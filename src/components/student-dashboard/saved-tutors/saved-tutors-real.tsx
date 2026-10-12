@@ -49,7 +49,7 @@ export function SavedTutorsReal({ tutors }: { tutors: SavedTutorCard[] }) {
             <div key={t.tutorId} className="flex flex-col rounded-2xl border border-ensena-border bg-ensena-surface p-5">
               <div className="flex items-start gap-3">
                 <span className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ensena-primary/10 font-semibold text-ensena-primary">
-                  {t.image ? <Image src={t.image} alt={t.name} fill className="object-cover" /> : t.name[0]}
+                  {t.image ? <Image src={t.image} alt={t.name} fill sizes="56px" className="object-cover" /> : t.name[0]}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1 font-semibold text-ensena-ink">

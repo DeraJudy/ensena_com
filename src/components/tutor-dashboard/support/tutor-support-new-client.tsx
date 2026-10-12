@@ -9,7 +9,7 @@ import type { RelatedRecordType, SupportContext, SupportSource } from "@/lib/sup
 
 const TUTOR_CONTEXTS: SupportContext[] = ["tutor", "booking", "group-class", "payment", "payout", "account", "technical"];
 
-export function TutorSupportNewClient() {
+export function TutorSupportNewClient({ live = false, userName }: { live?: boolean; userName?: string } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const contextParam = searchParams.get("context") as SupportContext | null;
@@ -20,13 +20,19 @@ export function TutorSupportNewClient() {
   const presetCategory = searchParams.get("category") ?? undefined;
   const source = (searchParams.get("source") as SupportSource | null) ?? undefined;
 
-  const related = resolveRelatedRecord(relatedRecordType, relatedRecordId, relatedRecordLabel);
+  // The demo resolver reads browser-only records, so live mode only keeps the label.
+  const related = live
+    ? relatedRecordType && relatedRecordId && relatedRecordLabel
+      ? { type: relatedRecordType, id: relatedRecordId, label: relatedRecordLabel, lines: [] }
+      : undefined
+    : resolveRelatedRecord(relatedRecordType, relatedRecordId, relatedRecordLabel);
 
   return (
     <SupportRequestForm
       context={context}
       userRole="Tutor"
-      userName={dashboardTutor.name}
+      userName={userName ?? dashboardTutor.name}
+      live={live}
       related={related}
       presetCategory={presetCategory}
       source={source}

@@ -92,7 +92,7 @@ export function CounsellorDashboardClient() {
               <li key={s.id} className="rounded-xl border border-ensena-border p-3">
                 <div className="flex items-start gap-3">
                   <div className="relative size-9 shrink-0 overflow-hidden rounded-full">
-                    <Image src={s.studentImage} alt={s.student} fill className="object-cover" />
+                    <Image src={s.studentImage} alt={s.student} fill sizes="36px" className="object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-ensena-muted">{s.time}</p>
@@ -119,7 +119,7 @@ export function CounsellorDashboardClient() {
               <li key={r.id} className="rounded-xl border border-ensena-border p-3">
                 <div className="flex items-start gap-3">
                   <div className="relative size-9 shrink-0 overflow-hidden rounded-full">
-                    <Image src={r.studentImage} alt={r.student} fill className="object-cover" />
+                    <Image src={r.studentImage} alt={r.student} fill sizes="36px" className="object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-ensena-ink">{r.student}</p>
@@ -249,7 +249,7 @@ export function CounsellorDashboardClient() {
             {recentCounsellorMessages.map((m) => (
               <li key={m.id} className="flex items-center gap-2.5">
                 <div className="relative size-8 shrink-0 overflow-hidden rounded-full">
-                  <Image src={m.studentImage} alt={m.student} fill className="object-cover" />
+                  <Image src={m.studentImage} alt={m.student} fill sizes="32px" className="object-cover" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-semibold text-ensena-ink">{m.student}</p>

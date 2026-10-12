@@ -63,7 +63,7 @@ function ConversationAvatar({ conversation, size = "md" }: { conversation: Conve
   if (conversation.type === "Private Student" || conversation.type === "Discovery Session") {
     return conversation.image ? (
       <div className={cn("relative shrink-0 overflow-hidden rounded-full", sizeClasses[size])}>
-        <Image src={conversation.image} alt={conversation.title} fill className="object-cover" />
+        <Image src={conversation.image} alt={conversation.title} fill sizes={size === "lg" ? "80px" : "44px"} className="object-cover" />
       </div>
     ) : (
       <span className={cn("flex shrink-0 items-center justify-center rounded-full bg-ensena-primary/10 font-semibold text-ensena-primary", sizeClasses[size], size === "lg" ? "text-xl" : "text-xs")}>

@@ -36,7 +36,7 @@ export function SavedTutorsClient() {
             <div className="flex items-start justify-between">
               <Link href={`/find-teachers/${t.slug}`} className="flex items-center gap-3">
                 <div className="relative size-14 shrink-0 overflow-hidden rounded-full">
-                  <Image src={t.image} alt={t.name} fill className="object-cover" />
+                  <Image src={t.image} alt={t.name} fill sizes="56px" className="object-cover" />
                 </div>
                 <div>
                   <p className="flex items-center gap-1 text-sm font-semibold text-ensena-ink">

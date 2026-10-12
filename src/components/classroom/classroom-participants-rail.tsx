@@ -10,7 +10,7 @@ function Avatar({ participant }: { participant: ClassroomParticipantView }) {
   return (
     <div className="relative size-9 shrink-0 overflow-hidden rounded-full bg-ensena-primary/20">
       {participant.image ? (
-        <Image src={participant.image} alt={participant.name} fill className="object-cover" />
+        <Image src={participant.image} alt={participant.name} fill sizes="36px" className="object-cover" />
       ) : (
         <span className="flex size-full items-center justify-center text-xs font-semibold text-ensena-primary">{initials(participant.name)}</span>
       )}

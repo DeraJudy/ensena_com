@@ -76,7 +76,7 @@ function RecommendedTutorCard({ tutor: t }: { tutor: TutorListing }) {
   return (
     <div className="relative w-48 shrink-0 overflow-hidden rounded-2xl border border-ensena-border bg-ensena-surface sm:w-auto">
       <div className="relative aspect-[4/3] w-full">
-        <Image src={t.image} alt={t.name} fill className="object-cover" />
+        <Image src={t.image} alt={t.name} fill sizes="(min-width: 640px) 25vw, 192px" className="object-cover" />
         <button
           type="button"
           aria-pressed={saved}
@@ -493,7 +493,7 @@ export function StudentDashboardClient() {
               className="flex items-center gap-2 rounded-full border border-ensena-border bg-ensena-surface py-1 pl-1 pr-3"
             >
               <span className="relative size-9 shrink-0 overflow-hidden rounded-full">
-                <Image src={me.image} alt={me.name} fill className="object-cover" />
+                <Image src={me.image} alt={me.name} fill sizes="36px" className="object-cover" />
               </span>
               <span className="text-sm font-medium text-ensena-ink">{me.name}</span>
               <ChevronDown className="size-3.5 text-ensena-muted" />

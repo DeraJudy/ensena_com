@@ -3,11 +3,13 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Paperclip, X } from "lucide-react";
+import { CheckCircle2, Mail, Paperclip, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { submitSupportTicket } from "@/lib/actions/support";
 import { submitSupportRequest } from "@/lib/support-store";
-import { SUPPORT_CONTEXT_CONFIG, type RelatedRecordType, type SupportAttachment, type SupportContext, type SupportSource, type SupportUserRole } from "@/lib/support-data";
+import { uploadSupportFiles } from "@/lib/support-uploads";
+import { SUPPORT_CONTEXT_CONFIG, SUPPORT_EMAIL, type RelatedRecordType, type SupportAttachment, type SupportContext, type SupportSource, type SupportUserRole } from "@/lib/support-data";
 
 export interface RelatedRecordSummary {
   type: RelatedRecordType;
@@ -29,6 +31,7 @@ export function SupportRequestForm({
   related,
   presetCategory,
   source = "Ticket",
+  live = false,
   onSubmitted,
 }: {
   context: SupportContext;
@@ -37,18 +40,25 @@ export function SupportRequestForm({
   related?: RelatedRecordSummary;
   presetCategory?: string;
   source?: SupportSource;
+  /** Save to the real database (the requester comes from the session; a guest types a name + email). */
+  live?: boolean;
   onSubmitted: (id: string) => void;
 }) {
   const router = useRouter();
   const config = SUPPORT_CONTEXT_CONFIG[context];
   const [category, setCategory] = useState(presetCategory && config.categories.includes(presetCategory) ? presetCategory : "");
   const [message, setMessage] = useState("");
-  const [attachments, setAttachments] = useState<SupportAttachment[]>([]);
+  const [attachments, setAttachments] = useState<(SupportAttachment & { file: File })[]>([]);
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestKey] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : undefined));
+  const isGuest = live && userRole === "Guest";
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = category !== "" && message.trim() !== "" && !submitting;
+  const canSubmit = category !== "" && message.trim() !== "" && (!isGuest || (guestName.trim() !== "" && guestEmail.trim() !== "")) && !submitting;
+  const showEmailHint = context === "technical" || category.toLowerCase().startsWith("technical");
 
   function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -58,10 +68,15 @@ export function SupportRequestForm({
       setError("Attachments must be 5MB or smaller.");
       return;
     }
+    if (attachments.length >= 5) {
+      setError("You can attach up to 5 files.");
+      return;
+    }
+    setError(null);
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        setAttachments((prev) => [...prev, { name: file.name, size: `${Math.max(1, Math.round(file.size / 1024))} KB`, dataUrl: reader.result as string }]);
+        setAttachments((prev) => [...prev, { name: file.name, size: `${Math.max(1, Math.round(file.size / 1024))} KB`, dataUrl: reader.result as string, file }]);
       }
     };
     reader.readAsDataURL(file);
@@ -71,6 +86,32 @@ export function SupportRequestForm({
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
+    if (live) {
+      try {
+        const files = attachments.length ? await uploadSupportFiles(attachments.map((a) => a.file), guestKey) : [];
+        const result = await submitSupportTicket({
+          context,
+          category,
+          message: message.trim(),
+          source,
+          relatedRecordType: related?.type,
+          relatedRecordId: related?.id,
+          relatedRecordLabel: related?.label,
+          attachments: files,
+          guest: isGuest ? { name: guestName.trim(), email: guestEmail.trim(), key: guestKey } : undefined,
+        });
+        if (!result.ok) {
+          setError(result.message);
+          setSubmitting(false);
+          return;
+        }
+        onSubmitted(result.id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "We couldn't submit your request. Please try again.");
+        setSubmitting(false);
+      }
+      return;
+    }
     try {
       const request = await submitSupportRequest({
         userName,
@@ -82,7 +123,7 @@ export function SupportRequestForm({
         relatedRecordType: related?.type,
         relatedRecordId: related?.id,
         relatedRecordLabel: related?.label,
-        attachments: attachments.length ? attachments : undefined,
+        attachments: attachments.length ? attachments.map(({ name, size, dataUrl }) => ({ name, size, dataUrl })) : undefined,
       });
       onSubmitted(request.id);
     } catch {
@@ -142,6 +183,19 @@ export function SupportRequestForm({
         </div>
       </div>
 
+      {isGuest && (
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-ensena-ink">Your name</span>
+            <input value={guestName} onChange={(e) => setGuestName(e.target.value)} autoComplete="name" className="h-11 rounded-xl border border-ensena-border px-3 text-sm outline-none focus-visible:border-ensena-primary" />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-ensena-ink">Email for our reply</span>
+            <input type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} autoComplete="email" className="h-11 rounded-xl border border-ensena-border px-3 text-sm outline-none focus-visible:border-ensena-primary" />
+          </label>
+        </div>
+      )}
+
       <label className="mt-6 flex flex-col gap-1.5">
         <span className="text-sm font-semibold text-ensena-ink">Describe your issue</span>
         <textarea
@@ -153,7 +207,7 @@ export function SupportRequestForm({
         />
       </label>
 
-      <input ref={fileInputRef} type="file" onChange={handleFileSelected} className="hidden" />
+      <input ref={fileInputRef} type="file" accept="image/*,application/pdf,.doc,.docx,.txt" onChange={handleFileSelected} className="hidden" />
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-xs font-medium text-ensena-muted hover:text-ensena-ink">
           <Paperclip className="size-3.5" /> Attach a screenshot or file
@@ -167,6 +221,16 @@ export function SupportRequestForm({
           </span>
         ))}
       </div>
+
+      {showEmailHint && (
+        <p className="mt-4 flex items-start gap-2 rounded-xl bg-ensena-bg-soft px-4 py-3 text-xs text-ensena-muted">
+          <Mail className="mt-0.5 size-3.5 shrink-0 text-ensena-primary" />
+          <span>
+            For technical problems you can also email{" "}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-ensena-primary hover:underline">{SUPPORT_EMAIL}</a>. A screenshot of the error and the page you were on helps us fix it faster.
+          </span>
+        </p>
+      )}
 
       {error && <p className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p>}
 
@@ -191,7 +255,7 @@ export function SupportSubmittedConfirmation({ supportId, viewHref }: { supportI
         <CheckCircle2 className="size-7" />
       </span>
       <h1 className="mt-4 font-heading text-xl font-semibold text-ensena-ink">Your support request has been submitted</h1>
-      <p className="mt-1 text-sm text-ensena-muted">We&apos;ll get back to you as soon as possible.</p>
+      <p className="mt-1 text-sm text-ensena-muted">We&apos;ll get back to you as soon as possible. Keep this reference for your records.</p>
       <span className="mt-4 rounded-full bg-ensena-bg-soft px-4 py-1.5 font-mono text-sm font-semibold tracking-wide text-ensena-ink">{supportId}</span>
       {viewHref && (
         <Button nativeButton={false} render={<Link href={viewHref} />} className="mt-6 h-11 rounded-full bg-ensena-primary px-6 text-sm font-semibold text-white hover:bg-ensena-primary-hover">

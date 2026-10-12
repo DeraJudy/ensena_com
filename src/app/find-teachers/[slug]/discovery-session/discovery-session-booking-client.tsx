@@ -300,7 +300,7 @@ export function DiscoverySessionBookingClient({ tutor }: { tutor: TutorListing }
         <div className="mt-6 w-full rounded-2xl border border-ensena-border p-5 text-left">
           <div className="flex items-center gap-3">
             <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
-              <Image src={tutor.image} alt={tutor.name} fill className="object-cover" />
+              <Image src={tutor.image} alt={tutor.name} fill sizes="48px" className="object-cover" />
             </div>
             <div>
               <p className="text-sm font-semibold text-ensena-ink">{tutor.name}</p>
@@ -337,7 +337,7 @@ export function DiscoverySessionBookingClient({ tutor }: { tutor: TutorListing }
         <div className="rounded-2xl border border-ensena-border p-6">
           <div className="flex items-start gap-4">
             <div className="relative size-16 shrink-0 overflow-hidden rounded-full">
-              <Image src={tutor.image} alt={tutor.name} fill className="object-cover" />
+              <Image src={tutor.image} alt={tutor.name} fill sizes="64px" className="object-cover" />
             </div>
             <div>
               <p className="flex items-center gap-1.5 text-sm font-semibold text-ensena-ink">
@@ -543,7 +543,7 @@ export function DiscoverySessionBookingClient({ tutor }: { tutor: TutorListing }
 
             <div className="mt-4 flex items-center gap-3">
               <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
-                <Image src={tutor.image} alt={tutor.name} fill className="object-cover" />
+                <Image src={tutor.image} alt={tutor.name} fill sizes="48px" className="object-cover" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-ensena-ink">{tutor.name}</p>

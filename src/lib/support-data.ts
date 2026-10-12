@@ -19,6 +19,9 @@ export type SupportContext =
   | "technical"
   | "platform-staff";
 
+// The one support inbox address shown across Help Centers and emails.
+export const SUPPORT_EMAIL = "support@ensena.co";
+
 export type SupportStatus = "Open" | "In Progress" | "Waiting for User" | "Resolved" | "Closed";
 export type SupportPriority = "Low" | "Normal" | "High" | "Urgent";
 export type RelatedRecordType = "booking" | "group-class" | "payout" | "counselling" | "restriction";
@@ -53,6 +56,14 @@ export interface SupportAttachment {
   name: string;
   size: string;
   dataUrl: string;
+}
+
+// How an attachment is stored in the database (support_messages.attachments).
+export interface StoredAttachment {
+  name: string;
+  size: number;
+  mimeType: string;
+  path: string;
 }
 
 export interface SupportMessage {

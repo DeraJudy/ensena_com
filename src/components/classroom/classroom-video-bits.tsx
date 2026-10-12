@@ -45,7 +45,7 @@ export function VideoStreamView({ stream, muted, sinkId, className }: { stream: 
 }
 
 export function AvatarFill({ name, image, large = false }: { name: string; image?: string; large?: boolean }) {
-  if (image) return <Image src={image} alt={name} fill className="object-cover" />;
+  if (image) return <Image src={image} alt={name} fill sizes={large ? "(min-width: 1024px) 66vw, 100vw" : "(min-width: 1024px) 33vw, 50vw"} className="object-cover" />;
   // No photo on file for this person (e.g. a tutor's own student roster
   // only stores a name) — a real circular avatar badge, not a giant
   // stretched initial, so it still reads as an intentional "no photo"

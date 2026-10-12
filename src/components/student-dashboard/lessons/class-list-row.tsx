@@ -69,7 +69,7 @@ export function ClassListRow({ item }: { item: ClassListItem }) {
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-ensena-border bg-ensena-surface p-4 sm:flex-row sm:items-center">
       <div className="relative size-14 shrink-0 overflow-hidden rounded-full">
-        <Image src={item.tutorImage} alt={item.tutor} fill className="object-cover" />
+        <Image src={item.tutorImage} alt={item.tutor} fill sizes="56px" className="object-cover" />
       </div>
 
       <div className="min-w-[170px] flex-1">

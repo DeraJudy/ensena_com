@@ -360,7 +360,7 @@ function ProfilePreviewCard({ form, photo }: { form: PublicProfileFormState; pho
       <div className="h-24 bg-gradient-to-br from-ensena-cta-from to-ensena-cta-to" />
       <div className="px-5 pb-5">
         <div className="relative -mt-10 size-20 overflow-hidden rounded-full border-4 border-white">
-          <Image src={photo} alt={me.name} fill className="object-cover" />
+          <Image src={photo} alt={me.name} fill sizes="80px" className="object-cover" />
           <span className="absolute bottom-1 right-1 size-3 rounded-full border-2 border-white bg-ensena-success" />
         </div>
         <p className="mt-2 flex items-center gap-1.5 font-heading text-lg font-semibold text-ensena-ink">
@@ -888,7 +888,7 @@ export function MyProfileClient({ live = null }: { live?: LiveProfileData | null
               <div className="mt-4 flex flex-wrap items-start gap-6">
                 <div className="text-center">
                   <div className="relative mx-auto size-24 overflow-hidden rounded-full">
-                    <Image src={photo} alt={me.name} fill className="object-cover" />
+                    <Image src={photo} alt={me.name} fill sizes="96px" className="object-cover" />
                     <button type="button" aria-label="Change profile photo" onClick={() => photoInputRef.current?.click()} className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full bg-ensena-primary text-white ring-2 ring-white">
                       <Camera className="size-4" />
                     </button>
@@ -1224,7 +1224,7 @@ export function MyProfileClient({ live = null }: { live?: LiveProfileData | null
         <div className="mt-5 flex flex-col gap-4 lg:hidden">
           <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5 text-center">
             <div className="relative mx-auto size-24 overflow-hidden rounded-full">
-              <Image src={photo} alt={me.name} fill className="object-cover" />
+              <Image src={photo} alt={me.name} fill sizes="96px" className="object-cover" />
               <button type="button" aria-label="Change profile photo" onClick={() => photoInputRef.current?.click()} className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full bg-ensena-primary text-white ring-2 ring-white">
                 <Camera className="size-4" />
               </button>

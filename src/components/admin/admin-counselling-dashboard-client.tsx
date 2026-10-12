@@ -245,7 +245,7 @@ function DashboardTab({
                   <tr key={a.id} className="border-b border-ensena-border text-sm last:border-0">
                     <td className="py-3 pr-3">
                       <div className="flex items-center gap-2">
-                        <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill className="object-cover" /></div>
+                        <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill sizes="32px" className="object-cover" /></div>
                         <span className="font-medium text-ensena-ink">{a.student}</span>
                       </div>
                     </td>
@@ -281,7 +281,7 @@ function DashboardTab({
               <li key={a.id} className="rounded-xl border border-ensena-border p-3.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill className="object-cover" /></div>
+                    <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill sizes="36px" className="object-cover" /></div>
                     <div>
                       <p className="text-sm font-semibold text-ensena-ink">{a.student}</p>
                       <p className="text-xs text-ensena-muted">{a.level} · {a.exam}</p>
@@ -311,7 +311,7 @@ function DashboardTab({
             {followUps.map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-3 rounded-xl border border-ensena-border p-3">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill className="object-cover" /></div>
+                  <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill sizes="32px" className="object-cover" /></div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ensena-ink">{a.student}</p>
                     <p className="truncate text-xs text-ensena-muted">{a.level} · Last session: {a.dateLabel}</p>
@@ -393,7 +393,7 @@ function AppointmentsTab({
               <tr key={a.id} className="border-b border-ensena-border text-sm last:border-0 hover:bg-ensena-bg-soft">
                 <td className="py-3 pr-3">
                   <div className="flex items-center gap-2">
-                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill className="object-cover" /></div>
+                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill sizes="32px" className="object-cover" /></div>
                     <span className="font-medium text-ensena-ink">{a.student}</span>
                   </div>
                 </td>
@@ -494,7 +494,7 @@ function StudentsTab({ appointments }: { appointments: CounsellingAppointment[] 
               >
                 <td className="py-3 pr-3">
                   <Link href={`/admin/counsellors/students/${studentSlug(s.student)}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2">
-                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={s.studentImage} alt={s.student} fill className="object-cover" /></div>
+                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={s.studentImage} alt={s.student} fill sizes="32px" className="object-cover" /></div>
                     <span className="font-medium text-ensena-ink">{s.student}</span>
                   </Link>
                 </td>
@@ -538,7 +538,7 @@ function IntakeFormsTab({ appointments }: { appointments: CounsellingAppointment
               <tr key={a.id} className="border-b border-ensena-border text-sm last:border-0 hover:bg-ensena-bg-soft">
                 <td className="py-3 pr-3">
                   <div className="flex items-center gap-2">
-                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill className="object-cover" /></div>
+                    <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill sizes="32px" className="object-cover" /></div>
                     <span className="font-medium text-ensena-ink">{a.student}</span>
                   </div>
                 </td>
@@ -591,7 +591,7 @@ function ActionPlansTab({ appointments }: { appointments: CounsellingAppointment
                 <tr key={a.id} className="border-b border-ensena-border text-sm last:border-0 hover:bg-ensena-bg-soft">
                   <td className="py-3 pr-3">
                     <Link href={`/admin/counsellors/students/${studentSlug(a.student)}`} className="flex items-center gap-2">
-                      <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill className="object-cover" /></div>
+                      <div className="relative size-8 shrink-0 overflow-hidden rounded-full"><Image src={a.studentImage} alt={a.student} fill sizes="32px" className="object-cover" /></div>
                       <span className="font-medium text-ensena-ink">{a.student}</span>
                     </Link>
                   </td>

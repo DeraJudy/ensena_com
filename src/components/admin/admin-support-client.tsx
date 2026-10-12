@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -66,9 +66,20 @@ function Avatar({ name, className }: { name: string; className?: string }) {
   );
 }
 
-export function AdminSupportClient() {
+// `live` = every request from the database (Supabase configured); without
+// it the inbox falls back to the browser demo store.
+export function AdminSupportClient({ live }: { live?: SupportRequest[] } = {}) {
   const session = useAdminSession();
-  const requests = useSupportRequests();
+  const router = useRouter();
+  const demo = useSupportRequests();
+  const requests = live ?? demo;
+  // New tickets show up without a manual reload.
+  const isLive = Boolean(live);
+  useEffect(() => {
+    if (!isLive) return;
+    const timer = window.setInterval(() => router.refresh(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [isLive, router]);
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [statusFilter, setStatusFilter] = useState<StatusTab>(() => resolveTab(tabParam));

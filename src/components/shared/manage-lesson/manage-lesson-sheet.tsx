@@ -55,7 +55,7 @@ export function ManageLessonSheet({
         <div className="flex items-center gap-3 px-5 py-4">
           {data.image && (
             <div className="relative size-11 shrink-0 overflow-hidden rounded-full">
-              <Image src={data.image} alt={data.subtitle ?? data.title} fill className="object-cover" />
+              <Image src={data.image} alt={data.subtitle ?? data.title} fill sizes="44px" className="object-cover" />
             </div>
           )}
           <div className="min-w-0 flex-1">

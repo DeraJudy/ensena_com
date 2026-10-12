@@ -123,7 +123,7 @@ export function HowItWorksClient() {
 
             <div className="absolute -left-6 top-10 flex items-center gap-2.5 rounded-2xl border border-ensena-border bg-ensena-surface px-3.5 py-2.5 shadow-lg">
               <div className="relative size-9 shrink-0 overflow-hidden rounded-full">
-                <Image src={heroTutor.image} alt={heroTutor.name} fill className="object-cover" />
+                <Image src={heroTutor.image} alt={heroTutor.name} fill sizes="36px" className="object-cover" />
               </div>
               <div>
                 <p className="text-xs font-semibold text-ensena-ink">{heroTutor.name}</p>
@@ -371,7 +371,7 @@ export function HowItWorksClient() {
               ))}
             </div>
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
-              <Image src={tutorBannerImage} alt="Student learning safely on Ensena" fill className="object-cover" />
+              <Image src={tutorBannerImage} alt="Student learning safely on Ensena" fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
             </div>
           </div>
 

@@ -231,7 +231,7 @@ export function StudentFullDetailsClient({ studentId }: { studentId: string }) {
                 {profile.tutors.map((t) => (
                   <li key={t.name} className="rounded-2xl border border-ensena-border p-3.5 text-sm">
                     <div className="flex items-center gap-2.5">
-                      <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill className="object-cover" /></div>
+                      <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill sizes="36px" className="object-cover" /></div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-ensena-ink">{t.name}</p>
                         <p className="text-xs text-ensena-muted">{t.subject} · <Star className="inline size-2.5 fill-amber-400 text-amber-400" /> {t.rating}</p>
@@ -333,7 +333,7 @@ export function StudentFullDetailsClient({ studentId }: { studentId: string }) {
               <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {savedTutors.map((t) => (
                   <li key={t.slug} className="flex items-center gap-2.5 rounded-2xl border border-ensena-border p-3.5 text-sm">
-                    <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill className="object-cover" /></div>
+                    <div className="relative size-10 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill sizes="40px" className="object-cover" /></div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-ensena-ink">{t.name}</p>
                       <p className="text-xs text-ensena-muted">{t.subjectTitle} · <Star className="inline size-2.5 fill-amber-400 text-amber-400" /> {t.rating}</p>

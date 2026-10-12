@@ -78,7 +78,7 @@ export function QuickSummaryDrawer({
           <div className="flex items-center gap-3">
             {image && (
               <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
-                <Image src={image} alt={name} fill className="object-cover" />
+                <Image src={image} alt={name} fill sizes="48px" className="object-cover" />
               </div>
             )}
             <div className="min-w-0">

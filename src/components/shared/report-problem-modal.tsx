@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { disputeReasons } from "@/lib/escrow-release";
 import { dashboardStudent } from "@/lib/student-dashboard-data";
+import { submitSupportTicket } from "@/lib/actions/support";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { submitSupportRequest } from "@/lib/support-store";
 import type { RelatedRecordType, SupportContext } from "@/lib/support-data";
 
@@ -35,7 +37,24 @@ export function ReportProblemModal({
   const [details, setDetails] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   async function submit() {
+    setError(null);
+    if (isSupabaseConfigured()) {
+      const result = await submitSupportTicket({
+        context,
+        category: reason,
+        message: details.trim() || reason,
+        source: "Report",
+        relatedRecordType,
+        relatedRecordId,
+        relatedRecordLabel,
+      });
+      if (!result.ok) return setError(result.message);
+      setSubmitted(true);
+      return;
+    }
     await submitSupportRequest({
       userName: dashboardStudent.name,
       userRole: "Student",
@@ -77,6 +96,7 @@ export function ReportProblemModal({
             <span className="text-xs font-medium text-ensena-muted">Tell us more</span>
             <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} className="rounded-lg border border-ensena-border p-2.5 text-sm" />
           </label>
+          {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{error}</p>}
           <Button onClick={submit} className="h-10 w-full rounded-full bg-rose-600 text-sm font-semibold text-white hover:bg-rose-700">
             Submit
           </Button>

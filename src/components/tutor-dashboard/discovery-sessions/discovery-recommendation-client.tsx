@@ -46,7 +46,7 @@ export function DiscoveryRecommendationClient({ sessionId }: { sessionId: string
       <p className="mt-2 max-w-md text-sm text-ensena-muted">This was a free 25-minute Discovery Session, so there&apos;s nothing to release or confirm here.</p>
 
       <div className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-ensena-border bg-ensena-surface p-4 text-left">
-        <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={session.studentImage} alt={session.student} fill className="object-cover" /></div>
+        <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={session.studentImage} alt={session.student} fill sizes="48px" className="object-cover" /></div>
         <div>
           <p className="text-sm font-semibold text-ensena-ink">{session.student}</p>
           <p className="text-xs text-ensena-muted">{session.subject} · Discovery Session on {session.date}</p>

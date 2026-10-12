@@ -87,7 +87,7 @@ export function StudentMobileTopbar() {
             }}
             className="relative size-9 shrink-0 overflow-hidden rounded-full border border-ensena-border"
           >
-            <Image src={me.image} alt={me.name} fill className="object-cover" />
+            <Image src={me.image} alt={me.name} fill sizes="36px" className="object-cover" />
           </button>
           {profileOpen && (
             <div className="absolute right-0 top-11 z-30 w-56 rounded-2xl border border-ensena-border bg-white p-1.5 shadow-lg">

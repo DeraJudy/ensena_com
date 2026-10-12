@@ -88,7 +88,7 @@ export function CounsellorDashboardSidebar() {
 
       <div className="mx-4 flex items-center gap-3 rounded-2xl bg-ensena-bg-soft p-3">
         <div className="relative size-10 shrink-0 overflow-hidden rounded-full">
-          <Image src={counsellorProfile.image} alt={counsellorProfile.name} fill className="object-cover" />
+          <Image src={counsellorProfile.image} alt={counsellorProfile.name} fill sizes="40px" className="object-cover" />
         </div>
         <p className="truncate text-sm font-semibold text-ensena-ink">{counsellorProfile.name}</p>
       </div>

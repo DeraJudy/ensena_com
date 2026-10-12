@@ -106,7 +106,7 @@ function PrivateHeaderCard({ title, tutor, tutorImage, rating }: Pick<PrivateLes
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-ensena-border bg-ensena-surface p-5 sm:flex-row sm:items-center">
       <div className="relative size-20 shrink-0 overflow-hidden rounded-full">
-        <Image src={tutorImage} alt={tutor} fill className="object-cover" />
+        <Image src={tutorImage} alt={tutor} fill sizes="80px" className="object-cover" />
       </div>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +214,7 @@ function TutorCard({ title, tutor, tutorImage, onMessageTutor }: Pick<PrivateLes
       <h2 className="font-heading text-base font-semibold text-ensena-ink">Tutor</h2>
       <div className="mt-3 flex items-center gap-3">
         <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
-          <Image src={tutorImage} alt={tutor} fill className="object-cover" />
+          <Image src={tutorImage} alt={tutor} fill sizes="48px" className="object-cover" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ensena-ink">{tutor}</p>
@@ -563,7 +563,7 @@ export function ClassDetailClient({ id }: { id: string }) {
         <div className="mt-5 rounded-2xl border border-ensena-border bg-ensena-surface p-5">
           <div className="flex items-center gap-4">
             <div className="relative size-16 shrink-0 overflow-hidden rounded-full">
-              <Image src={discovery.tutorImage} alt={discovery.tutor} fill className="object-cover" />
+              <Image src={discovery.tutorImage} alt={discovery.tutor} fill sizes="64px" className="object-cover" />
             </div>
             <div>
               <span className="mb-1 inline-block rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700">Discovery Session</span>

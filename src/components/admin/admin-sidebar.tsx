@@ -302,7 +302,7 @@ export function AdminSidebar() {
           className="flex w-full items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-left hover:bg-ensena-bg-soft"
         >
           <span className="relative size-9 shrink-0 overflow-hidden rounded-full">
-            <Image src={session.image ?? "/teacher-4.jpg.png"} alt={session.name} fill className="object-cover" />
+            <Image src={session.image ?? "/teacher-4.jpg.png"} alt={session.name} fill sizes="36px" className="object-cover" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-ensena-ink">{session.name}</span>

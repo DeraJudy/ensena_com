@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Bold,
@@ -27,8 +28,11 @@ import { useSupportRequests } from "@/hooks/use-support-requests";
 import { initialAdminStudents } from "@/lib/admin-data";
 import { getPlatformUsers } from "@/lib/admin-platform-users-store";
 import { resolveRelatedRecord } from "@/lib/support-related-record";
+import { assignSupportRequestTo, setSupportPriority, setSupportStatus, staffReplyToSupportRequest } from "@/lib/actions/support";
 import { addSupportReply, assignSupportRequest, updateSupportPriority, updateSupportStatus } from "@/lib/support-store";
-import type { SupportAttachment, SupportPriority, SupportStatus } from "@/lib/support-data";
+import type { AdminSupportExtras, SupportStaffOption } from "@/lib/support-server";
+import { uploadSupportFiles } from "@/lib/support-uploads";
+import type { SupportAttachment, SupportPriority, SupportRequest, SupportStatus } from "@/lib/support-data";
 import { getAdminTutors } from "@/lib/tutor-verification-store";
 import { cn } from "@/lib/utils";
 
@@ -69,21 +73,53 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function AdminSupportDetailClient({ id }: { id: string }) {
+export interface AdminSupportLive {
+  request: SupportRequest | null;
+  extras: AdminSupportExtras;
+  staff: SupportStaffOption[];
+}
+
+// `live` = the request loaded from the database, with real staff to assign;
+// every action then goes through the support server actions. Without it the
+// page falls back to the browser demo store.
+export function AdminSupportDetailClient({ id, live }: { id: string; live?: AdminSupportLive }) {
   const session = useAdminSession();
+  const router = useRouter();
   const requests = useSupportRequests();
-  const request = requests.find((r) => r.id === id);
+  const request = live ? live.request : requests.find((r) => r.id === id);
+  const [pending, startTransition] = useTransition();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<Tab>("Conversation");
   const [composerMode, setComposerMode] = useState<"reply" | "internal">("reply");
   const [message, setMessage] = useState("");
-  const [attachments, setAttachments] = useState<SupportAttachment[]>([]);
+  const [attachments, setAttachments] = useState<(SupportAttachment & { file: File })[]>([]);
   const [assignOpen, setAssignOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const staffOptions = useMemo(() => getPlatformUsers().filter((u) => STAFF_ROLES.includes(u.role)).map((u) => ({ name: u.name, role: u.role })), []);
+  const demoStaff = useMemo(() => getPlatformUsers().filter((u) => STAFF_ROLES.includes(u.role)).map((u) => ({ id: u.name, name: u.name, role: u.role })), []);
+  const staffOptions = live ? live.staff : demoStaff;
+  const assignedId = live ? (staffOptions.find((s) => s.name === request?.assignedStaff)?.id ?? "") : (request?.assignedStaff ?? "");
+
+  // Runs a server action, then reloads the page data; demo mode runs the
+  // local store function instead.
+  function run(action: () => Promise<{ ok: boolean; message?: string }>, demo: () => void) {
+    setActionError(null);
+    if (!live) return demo();
+    startTransition(async () => {
+      const result = await action();
+      if (!result.ok) setActionError(result.message ?? "That didn't work. Please try again.");
+      router.refresh();
+    });
+  }
+  function changeStatus(status: SupportStatus) {
+    run(() => setSupportStatus(id, status), () => updateSupportStatus(id, status, session.name));
+  }
+  function changePriority(priority: SupportPriority) {
+    run(() => setSupportPriority(id, priority), () => updateSupportPriority(id, priority, session.name));
+  }
 
   if (!request) {
     return (
@@ -94,14 +130,18 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
     );
   }
 
-  const related = resolveRelatedRecord(request.relatedRecordType ?? null, request.relatedRecordId ?? null, request.relatedRecordLabel ?? null);
-  const tutorMatch = getAdminTutors().find((t) => t.name === request.userName);
-  const studentMatch = initialAdminStudents.find((s) => s.name === request.userName);
+  const related = live
+    ? request.relatedRecordLabel
+      ? { type: request.relatedRecordType!, id: request.relatedRecordId ?? "", label: request.relatedRecordLabel, lines: request.relatedRecordId ? [{ label: "Reference", value: request.relatedRecordId }] : [] }
+      : undefined
+    : resolveRelatedRecord(request.relatedRecordType ?? null, request.relatedRecordId ?? null, request.relatedRecordLabel ?? null);
+  const tutorMatch = live ? undefined : getAdminTutors().find((t) => t.name === request.userName);
+  const studentMatch = live ? undefined : initialAdminStudents.find((s) => s.name === request.userName);
   // "View User Profile" only resolves for requesters that exist in the
   // admin Students/Tutors rosters — a seeded demo requester with no such
   // record falls back to the relevant list rather than a dead link.
-  const userProfileHref = tutorMatch ? `/admin/tutors/${tutorMatch.id}` : studentMatch ? `/admin/students/${studentMatch.id}` : request.userRole === "Tutor" ? "/admin/tutors" : request.userRole === "Student" ? "/admin/students" : undefined;
-  const accountStatus = tutorMatch ? tutorMatch.verification : studentMatch ? studentMatch.status : request.userRole === "Admin" ? "Staff" : "—";
+  const userProfileHref = live ? live.extras.requesterProfileHref : tutorMatch ? `/admin/tutors/${tutorMatch.id}` : studentMatch ? `/admin/students/${studentMatch.id}` : request.userRole === "Tutor" ? "/admin/tutors" : request.userRole === "Student" ? "/admin/students" : undefined;
+  const accountStatus = live ? (live.extras.requesterAccountStatus ?? (request.userRole === "Guest" ? "No account" : "—")) : tutorMatch ? tutorMatch.verification : studentMatch ? studentMatch.status : request.userRole === "Admin" ? "Staff" : "—";
   const relatedHref =
     request.relatedRecordType === "booking" ? "/admin/bookings"
       : request.relatedRecordType === "group-class" ? "/admin/group-classes"
@@ -123,7 +163,7 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        setAttachments((prev) => [...prev, { name: file.name, size: `${Math.max(1, Math.round(file.size / 1024))} KB`, dataUrl: reader.result as string }]);
+        setAttachments((prev) => [...prev, { name: file.name, size: `${Math.max(1, Math.round(file.size / 1024))} KB`, dataUrl: reader.result as string, file }]);
       }
     };
     reader.readAsDataURL(file);
@@ -131,13 +171,35 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
 
   function handleSend() {
     if (!message.trim() && attachments.length === 0) return;
-    addSupportReply(request!.id, "staff", session.name, message.trim(), { isInternal: composerMode === "internal", attachments: attachments.length ? attachments : undefined });
-    setMessage("");
-    setAttachments([]);
+    const text = message.trim();
+    const internal = composerMode === "internal";
+    if (!live) {
+      addSupportReply(request!.id, "staff", session.name, text, { isInternal: internal, attachments: attachments.length ? attachments.map(({ name, size, dataUrl }) => ({ name, size, dataUrl })) : undefined });
+      setMessage("");
+      setAttachments([]);
+      return;
+    }
+    setActionError(null);
+    startTransition(async () => {
+      try {
+        const uploaded = attachments.length ? await uploadSupportFiles(attachments.map((a) => a.file)) : [];
+        const result = await staffReplyToSupportRequest(id, text, { internal, attachments: uploaded });
+        if (!result.ok) {
+          setActionError(result.message);
+          return;
+        }
+        setMessage("");
+        setAttachments([]);
+        router.refresh();
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Your reply couldn't be sent.");
+      }
+    });
   }
 
-  function handleAssign(staffName: string) {
-    assignSupportRequest(request!.id, staffName, session.name);
+  function handleAssign(staffId: string) {
+    const staffName = staffOptions.find((s) => s.id === staffId)?.name ?? "";
+    run(() => assignSupportRequestTo(id, staffId), () => assignSupportRequest(request!.id, staffName, session.name));
     setAssignOpen(false);
   }
 
@@ -186,7 +248,7 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
                 <div className="fixed inset-0 z-10" onClick={() => setAssignOpen(false)} aria-hidden="true" />
                 <div className="absolute right-0 top-11 z-20 w-56 rounded-2xl border border-ensena-border bg-ensena-surface p-1.5 shadow-lg">
                   {staffOptions.map((s) => (
-                    <button key={s.name} type="button" onClick={() => handleAssign(s.name)} className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm hover:bg-ensena-bg-soft">
+                    <button key={s.id} type="button" onClick={() => handleAssign(s.id)} className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm hover:bg-ensena-bg-soft">
                       <Avatar name={s.name} size="size-7" />
                       <span>
                         <span className="block font-medium text-ensena-ink">{s.name}</span>
@@ -209,10 +271,10 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
                 <div className="absolute right-0 top-11 z-20 w-48 rounded-2xl border border-ensena-border bg-ensena-surface p-1.5 shadow-lg">
-                  <button type="button" onClick={() => { updateSupportStatus(request!.id, "Resolved", session.name); setMenuOpen(false); }} className="flex w-full items-center rounded-xl px-2.5 py-2 text-left text-sm text-ensena-ink hover:bg-ensena-bg-soft">
+                  <button type="button" onClick={() => { changeStatus("Resolved"); setMenuOpen(false); }} className="flex w-full items-center rounded-xl px-2.5 py-2 text-left text-sm text-ensena-ink hover:bg-ensena-bg-soft">
                     Mark Resolved
                   </button>
-                  <button type="button" onClick={() => { updateSupportStatus(request!.id, "Closed", session.name); setMenuOpen(false); }} className="flex w-full items-center rounded-xl px-2.5 py-2 text-left text-sm text-ensena-ink hover:bg-ensena-bg-soft">
+                  <button type="button" onClick={() => { changeStatus("Closed"); setMenuOpen(false); }} className="flex w-full items-center rounded-xl px-2.5 py-2 text-left text-sm text-ensena-ink hover:bg-ensena-bg-soft">
                     Close Ticket
                   </button>
                 </div>
@@ -258,11 +320,17 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
                     <p className="mt-1.5 whitespace-pre-wrap text-sm text-ensena-ink">{m.text}</p>
                     {m.attachments && m.attachments.length > 0 && (
                       <div className="mt-2 flex flex-col gap-1.5">
-                        {m.attachments.map((a) => (
-                          <span key={a.name} className="flex w-fit items-center gap-2 rounded-lg border border-ensena-border bg-ensena-bg-soft px-2.5 py-1.5 text-xs text-ensena-ink">
-                            <Paperclip className="size-3.5 shrink-0" /> {a.name} <span className="text-ensena-muted">({a.size})</span>
-                          </span>
-                        ))}
+                        {m.attachments.map((a) =>
+                          a.dataUrl ? (
+                            <a key={a.name} href={a.dataUrl} target="_blank" rel="noreferrer" className="flex w-fit items-center gap-2 rounded-lg border border-ensena-border bg-ensena-bg-soft px-2.5 py-1.5 text-xs text-ensena-ink hover:underline">
+                              <Paperclip className="size-3.5 shrink-0" /> {a.name} <span className="text-ensena-muted">({a.size})</span>
+                            </a>
+                          ) : (
+                            <span key={a.name} className="flex w-fit items-center gap-2 rounded-lg border border-ensena-border bg-ensena-bg-soft px-2.5 py-1.5 text-xs text-ensena-ink">
+                              <Paperclip className="size-3.5 shrink-0" /> {a.name} <span className="text-ensena-muted">({a.size})</span>
+                            </span>
+                          )
+                        )}
                       </div>
                     )}
                   </div>
@@ -310,6 +378,7 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
                   </div>
                 )}
 
+                {actionError && <p className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{actionError}</p>}
                 <input ref={fileInputRef} type="file" onChange={handleFileSelected} className="hidden" />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-xs font-medium text-ensena-muted hover:text-ensena-ink">
@@ -322,7 +391,7 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
                     <button
                       type="button"
                       onClick={handleSend}
-                      disabled={!message.trim() && attachments.length === 0}
+                      disabled={pending || (!message.trim() && attachments.length === 0)}
                       className={cn(
                         "flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold text-white disabled:opacity-50",
                         composerMode === "internal" ? "bg-amber-500 hover:bg-amber-600" : "bg-ensena-primary hover:bg-ensena-primary-hover"
@@ -416,7 +485,7 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
             <div className="mt-3 flex flex-col gap-3">
               <label className="flex flex-col gap-1 text-xs">
                 <span className="font-medium text-ensena-muted">Change Status</span>
-                <select value={request.status} onChange={(e) => updateSupportStatus(request!.id, e.target.value as SupportStatus, session.name)} className="h-9 rounded-lg border border-ensena-border px-2 text-sm">
+                <select value={request.status} disabled={pending} onChange={(e) => changeStatus(e.target.value as SupportStatus)} className="h-9 rounded-lg border border-ensena-border px-2 text-sm">
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s}>{s}</option>
                   ))}
@@ -424,7 +493,7 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
               </label>
               <label className="flex flex-col gap-1 text-xs">
                 <span className="font-medium text-ensena-muted">Change Priority</span>
-                <select value={request.priority} onChange={(e) => updateSupportPriority(request!.id, e.target.value as SupportPriority, session.name)} className="h-9 rounded-lg border border-ensena-border px-2 text-sm">
+                <select value={request.priority} disabled={pending} onChange={(e) => changePriority(e.target.value as SupportPriority)} className="h-9 rounded-lg border border-ensena-border px-2 text-sm">
                   {PRIORITY_OPTIONS.map((p) => (
                     <option key={p}>{p}</option>
                   ))}
@@ -432,10 +501,10 @@ export function AdminSupportDetailClient({ id }: { id: string }) {
               </label>
               <label className="flex flex-col gap-1 text-xs">
                 <span className="font-medium text-ensena-muted">Assign To</span>
-                <select value={request.assignedStaff ?? ""} onChange={(e) => assignSupportRequest(request!.id, e.target.value, session.name)} className="h-9 rounded-lg border border-ensena-border px-2 text-sm">
+                <select value={assignedId} disabled={pending} onChange={(e) => handleAssign(e.target.value)} className="h-9 rounded-lg border border-ensena-border px-2 text-sm">
                   <option value="">Unassigned</option>
                   {staffOptions.map((s) => (
-                    <option key={s.name} value={s.name}>{s.name}</option>
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
               </label>

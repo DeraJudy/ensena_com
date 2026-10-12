@@ -119,7 +119,7 @@ function UpcomingCard({
       <div className="mt-auto flex items-center gap-2 pt-1">
         {avatarSrc && (
           <div className="relative size-9 shrink-0 overflow-hidden rounded-full">
-            <Image src={avatarSrc} alt={subtitle} fill className="object-cover" />
+            <Image src={avatarSrc} alt={subtitle} fill sizes="36px" className="object-cover" />
           </div>
         )}
         {primaryHref ? (
@@ -180,7 +180,7 @@ function ActiveRow({
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-ensena-border bg-ensena-surface p-4">
       <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
-        <Image src={avatarSrc} alt={tutor} fill className="object-cover" />
+        <Image src={avatarSrc} alt={tutor} fill sizes="48px" className="object-cover" />
       </div>
       <div className="min-w-[180px] flex-1">
         <p className="flex items-center gap-2 font-heading text-sm font-semibold text-ensena-ink">
@@ -816,7 +816,7 @@ export function MyClassesClient() {
                 return (
                   <div key={l.id} className="flex flex-wrap items-center gap-4 p-4">
                     <div className="relative size-11 shrink-0 overflow-hidden rounded-full">
-                      <Image src={avatarByTutor[l.tutor] ?? "/teacher-1.jpg.png"} alt={l.tutor} fill className="object-cover" />
+                      <Image src={avatarByTutor[l.tutor] ?? "/teacher-1.jpg.png"} alt={l.tutor} fill sizes="44px" className="object-cover" />
                     </div>
                     <div className="min-w-[160px] flex-1">
                       <p className="text-sm font-semibold text-ensena-ink">{l.subject}</p>
@@ -862,7 +862,7 @@ export function MyClassesClient() {
                 return (
                   <div key={l.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
                     <div className="relative size-11 shrink-0 overflow-hidden rounded-full grayscale">
-                      <Image src={avatarByTutor[l.tutor] ?? "/teacher-1.jpg.png"} alt={l.tutor} fill className="object-cover" />
+                      <Image src={avatarByTutor[l.tutor] ?? "/teacher-1.jpg.png"} alt={l.tutor} fill sizes="44px" className="object-cover" />
                     </div>
                     <div className="min-w-[160px] flex-1">
                       <p className="text-sm font-semibold text-ensena-ink">{l.subject}</p>
@@ -930,7 +930,7 @@ export function MyClassesClient() {
           <div className="flex flex-col gap-3 text-sm">
             <div className="flex items-center gap-3">
               <div className="relative size-11 shrink-0 overflow-hidden rounded-full">
-                <Image src={viewingLesson.tutorImage} alt={viewingLesson.tutor} fill className="object-cover" />
+                <Image src={viewingLesson.tutorImage} alt={viewingLesson.tutor} fill sizes="44px" className="object-cover" />
               </div>
               <div>
                 <p className="font-semibold text-ensena-ink">{viewingLesson.tutor}</p>

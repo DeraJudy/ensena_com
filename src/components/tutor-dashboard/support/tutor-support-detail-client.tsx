@@ -5,11 +5,12 @@ import { ChevronLeft } from "lucide-react";
 
 import { SupportConversation } from "@/components/support/support-conversation";
 import { useSupportRequests } from "@/hooks/use-support-requests";
+import type { SupportRequest } from "@/lib/support-data";
 import { dashboardTutor } from "@/lib/tutor-dashboard-data";
 
-export function TutorSupportDetailClient({ id }: { id: string }) {
+export function TutorSupportDetailClient({ id, live, userName }: { id: string; live?: SupportRequest | null; userName?: string }) {
   const requests = useSupportRequests();
-  const request = requests.find((r) => r.id === id && r.userName === dashboardTutor.name);
+  const request = live !== undefined ? live : requests.find((r) => r.id === id && r.userName === dashboardTutor.name);
 
   if (!request) {
     return (
@@ -22,9 +23,11 @@ export function TutorSupportDetailClient({ id }: { id: string }) {
 
   const relatedRecordHref =
     request.relatedRecordType === "booking"
-      ? "/tutor-dashboard/private-lessons"
+      ? request.relatedRecordId && /^[0-9a-f-]{36}$/i.test(request.relatedRecordId)
+        ? `/tutor-dashboard/private-lessons/${request.relatedRecordId}`
+        : "/tutor-dashboard/private-lessons"
       : request.relatedRecordType === "group-class"
-        ? "/tutor-dashboard/private-lessons?tab=Group Classes"
+        ? "/tutor-dashboard/group-classes"
         : request.relatedRecordType === "payout"
           ? "/tutor-dashboard/withdrawals"
           : undefined;
@@ -35,7 +38,7 @@ export function TutorSupportDetailClient({ id }: { id: string }) {
         <ChevronLeft className="size-4" /> Back to Support
       </Link>
       <div className="mt-3">
-        <SupportConversation request={request} currentUserName={dashboardTutor.name} relatedRecordHref={relatedRecordHref} />
+        <SupportConversation request={request} currentUserName={userName ?? dashboardTutor.name} relatedRecordHref={relatedRecordHref} live={live !== undefined} />
       </div>
     </div>
   );

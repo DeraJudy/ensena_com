@@ -105,7 +105,7 @@ function TransactionAvatar({ tx }: { tx: EarningsTransaction }) {
   }
   return tx.image ? (
     <div className="relative size-10 shrink-0 overflow-hidden rounded-full">
-      <Image src={tx.image} alt={tx.name} fill className="object-cover" />
+      <Image src={tx.image} alt={tx.name} fill sizes="40px" className="object-cover" />
     </div>
   ) : (
     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ensena-primary/10 text-xs font-semibold text-ensena-primary">

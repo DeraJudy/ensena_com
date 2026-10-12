@@ -2016,27 +2016,38 @@ export interface FaqItem {
 }
 
 export const faqItems: FaqItem[] = [
-  // Getting Started
-  { question: "How do I become a tutor on Ensena?", answer: "Complete the tutor application: your profile, subjects and academic levels, teaching format, and verification documents. Your account goes live once approved.", tags: ["account"] },
-  { question: "How do I complete my tutor profile?", answer: "Go to Profile → Public Profile to add your photo, headline, bio, subjects, academic levels, exam expertise, languages and pricing." },
-  { question: "How do I verify my account?", answer: "Upload your government ID and any relevant certifications under Profile → Verification & Documents. Our team reviews submissions within a few business days." },
-  { question: "How do I set my subjects and academic levels?", answer: "Go to Profile → Public Profile → Subjects and Academic Levels. You can add multiple levels, each with its own subjects." },
-  { question: "How do I set my availability?", answer: "Go to Calendar → Manage Availability to set your weekly recurring schedule, or use Block Time to mark yourself unavailable for specific slots." },
-  // Lessons
-  { question: "How do I accept a lesson request?", answer: "Booking requests appear under Private Lessons. Depending on your booking preference, lessons are either confirmed instantly or wait for your approval." },
-  { question: "How do I create a group class?", answer: "Go to Group Classes → Create Group Class, fill in the details (subject, level, schedule, pricing) and publish it to make it visible to students.", tags: ["group-class"] },
-  { question: "What happens if a student cancels?", answer: "If a student cancels more than 24 hours before the lesson, they receive a full refund. Late cancellations may still result in payment to you depending on our cancellation policy.", tags: ["booking"] },
-  { question: "How do I reschedule a lesson?", answer: "Open the lesson from Private Lessons or your Schedule and select Reschedule. The student is notified and must confirm the new time.", tags: ["booking"] },
-  // Payments & Earnings
-  { question: "How do I get paid for my lessons?", answer: "Payments are held in escrow and released to your available balance after each completed lesson. You can withdraw to your bank account at any time.", tags: ["payout", "payment"] },
-  { question: "How does escrow work?", answer: "A student's payment is held securely by Ensena and only released to you once the lesson is confirmed complete, protecting both sides." },
-  { question: "When can I withdraw my earnings?", answer: "As soon as a lesson's payment is released to your available balance, you can withdraw it from Earnings → Withdraw." },
-  { question: "How long does withdrawal take?", answer: "Withdrawals to verified bank accounts are typically processed within 1–3 business days.", tags: ["payout"] },
-  { question: "Why hasn't my payment been released?", answer: "Payments release automatically once a lesson is marked complete. If it's been longer than expected, check Escrow for the lesson's status or contact support with the booking reference." },
-  // Profile & Visibility
-  { question: "How do I improve my tutor profile?", answer: "Add a clear photo, a specific headline, a complete bio, and keep your subjects and availability up to date. Complete profiles rank higher in search." },
-  { question: "How do I set competitive pricing?", answer: "Check the Setting competitive pricing knowledge base article, or compare your rate to similar tutors in Find Teachers for your subject and level." },
-  { question: "How do I boost my profile completion score?", answer: "Fill in every section of Profile → Public Profile: photo, headline, bio, subjects, academic levels, languages, experience and pricing all count toward your score." },
+  // Getting started
+  { question: "How do I become a tutor on Ensena?", answer: "Sign up as a tutor and complete the application: your photo and profile, the subjects and academic levels you teach, your teaching format, and your verification documents. You must be at least 18. Our team reviews your application and you can start taking bookings once you're approved. You can follow progress under Application Status.", tags: ["account", "tutor-signup"] },
+  { question: "How do I verify my account?", answer: "Go to Verification and upload a government-issued ID plus your academic certificate and any teaching qualification. PDF, JPG, PNG, WEBP, GIF and Word files are accepted. If a document is rejected you'll see the reason and can upload a new one.", tags: ["account"] },
+  { question: "How do I complete my tutor profile?", answer: "Go to Profile → Public Profile and add a clear photo, a specific headline, your bio, subjects and academic levels, languages, experience and your prices. Use Preview Profile to see exactly what students see.", tags: ["account"] },
+  { question: "Why can't students find my profile?", answer: "Your profile only appears in Find Teachers when your application is approved, your profile is set to public (Settings → Privacy) and Vacation Mode is off (Profile → Availability). Students also only see times that fall inside your weekly availability.", tags: ["account"] },
+  // Availability & calendar
+  { question: "How do I set my availability?", answer: "Go to Profile → Availability and set your weekly hours. Students can book any free 30-minute slot inside those hours, at least 2 hours ahead and up to 90 days in advance. Times are shown in Nigeria time (WAT).", tags: ["account"] },
+  { question: "How do I block time off or go on holiday?", answer: "In Profile → Availability, use Block Time to close specific dates or hours. To pause all new bookings, turn on Vacation Mode. Lessons you've already accepted stay booked either way." },
+  // Lessons & bookings
+  { question: "How do students book me?", answer: "Students choose a free slot in your availability and pay to confirm it, so there's nothing for you to accept. An unpaid booking only holds the slot for 30 minutes. Paid lessons appear in Classes → Private Classes and on your Schedule.", tags: ["booking"] },
+  { question: "When can I enter the classroom?", answer: "You can open the classroom for a lesson up to 24 hours before it starts, so you can set up your whiteboard and materials. Students can join from 30 minutes before the start time.", tags: ["booking", "technical"] },
+  { question: "How do I reschedule a lesson?", answer: "Open the lesson in Classes → Private Classes and choose Reschedule. You can move a lesson up to 2 hours before it starts, to any time within the next 90 days that doesn't clash with your other classes or the student's. The student is notified straight away.", tags: ["booking"] },
+  { question: "What happens if I cancel a lesson?", answer: "When you cancel, the student always gets a full refund, and you'll be asked for a reason that is shared with them. If you only need a different time, reschedule instead.", tags: ["booking"] },
+  { question: "What happens if a student cancels?", answer: "If a student cancels 24 hours or more before the lesson they get a full refund. Between 2 and 24 hours before, they get 50% back and you keep the rest. Within 2 hours, or if the student doesn't show up, there's no refund.", tags: ["booking", "payment"] },
+  { question: "How do I mark a lesson as complete?", answer: "Ending the class from the classroom completes it automatically. If a lesson ended without that, open Classes → Private Classes, filter by Needs completing and choose Mark complete.", tags: ["booking"] },
+  // Group classes & discovery
+  { question: "How do I create a group class?", answer: "Go to Classes → Group Classes → Create Group Class. Set the title, subject, level, days, start time, session length, number of weeks, seats and price per student. Every session is generated for you and checked for clashes. Approved tutors can publish straight away; anything else is saved as a draft.", tags: ["group-class"] },
+  { question: "Can I cancel a group class session?", answer: "Yes. Open the class and cancel a single session, or cancel the whole class. Enrolled students are notified and refunded for any sessions they won't get.", tags: ["group-class"] },
+  { question: "What is a Discovery Session?", answer: "A free introductory call of up to 25 minutes where a student meets you before booking paid lessons. Each student can have one free Discovery Session per tutor. You'll find them under Classes → Discovery Sessions." },
+  // Payments & earnings
+  { question: "How much does Ensena charge?", answer: "Ensena keeps a 20% commission on each lesson or class. You earn the other 80% of the price you set.", tags: ["payment", "payout"] },
+  { question: "How does escrow work?", answer: "A student's payment is held securely by Ensena until the lesson is complete. After it ends, the student has 24 hours to confirm it or report a problem. The money is released to you when they confirm, or automatically after 24 hours if nothing is reported.", tags: ["payment", "payout"] },
+  { question: "Why hasn't my payment been released?", answer: "Payments are released 24 hours after a lesson is completed, or sooner if the student confirms. A payment stays on hold if the lesson was never marked complete or the student reported a problem; reported lessons are reviewed by our team. Check Escrow for the lesson's status, or submit a ticket with the booking reference.", tags: ["payment", "payout"] },
+  { question: "How do I withdraw my earnings?", answer: "Go to Withdrawals and add the bank account you want to be paid into. Once earnings are released to your available balance, request a withdrawal there and follow its status on the same page.", tags: ["payout"] },
+  // Messages & safety
+  { question: "Who can I message?", answer: "You can message students who have booked a lesson, discovery session or group class with you, and anyone who messages you first. For everyone's safety, phone numbers, emails, social handles and payment details can't be shared in messages, and repeated attempts can lead to a messaging restriction.", tags: ["account"] },
+  { question: "How do I appeal a messaging restriction or suspension?", answer: "Open the restriction notice and choose Contact Internal Support, or submit a ticket under Account & Profile. Your restriction stays in place until our team has reviewed it.", tags: ["account"] },
+  // Account & security
+  { question: "How do I change my name, phone number or password?", answer: "Update your name and phone number in Settings → Account. Change your password in Settings → Security. To change the email you sign in with, contact Ensena Support.", tags: ["account"] },
+  { question: "How do I turn on two-step verification?", answer: "Go to Settings → Security and set up an authenticator app. After that, you'll enter a 6-digit code from the app each time you sign in.", tags: ["account", "technical"] },
+  // Support
+  { question: "How do I contact Ensena Support?", answer: "Use Submit a Ticket on this page and choose what you need help with, or Report an Issue if something isn't working. You can follow every request and our replies under Your Support Requests. For technical problems you can also email support@ensena.co.", tags: ["technical"] },
 ];
 
 // Article content itself now lives in help-articles-data.ts (audience:

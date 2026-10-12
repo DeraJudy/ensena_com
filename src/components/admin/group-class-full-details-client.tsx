@@ -299,7 +299,7 @@ export function GroupClassFullDetailsClient({ classId }: { classId: string }) {
                   <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {groupClass.students.map((s) => (
                       <li key={s.id} className="flex items-center gap-2.5 rounded-xl bg-ensena-bg-soft p-3">
-                        <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={s.image} alt={s.name} fill className="object-cover" /></div>
+                        <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={s.image} alt={s.name} fill sizes="36px" className="object-cover" /></div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-ensena-ink">{s.name}</p>
                           <p className="text-xs text-ensena-muted">Attendance {s.attendancePct}% · HW {s.homeworkPct}% · Avg {s.avgScore}%</p>
@@ -330,7 +330,7 @@ export function GroupClassFullDetailsClient({ classId }: { classId: string }) {
                   <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {groupClass.waitlist.map((w) => (
                       <li key={w.id} className="flex items-center gap-2.5 rounded-xl bg-ensena-bg-soft p-3">
-                        <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={w.image} alt={w.name} fill className="object-cover" /></div>
+                        <div className="relative size-9 shrink-0 overflow-hidden rounded-full"><Image src={w.image} alt={w.name} fill sizes="36px" className="object-cover" /></div>
                         <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-ensena-ink">{w.name}</p><p className="text-xs text-ensena-muted">Joined waitlist {w.joinedDate}</p></div>
                       </li>
                     ))}

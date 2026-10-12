@@ -99,7 +99,7 @@ export function SignUpChooserClient() {
           <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="flex flex-col overflow-hidden rounded-2xl border border-ensena-border bg-ensena-surface">
               <div className="relative aspect-[4/3] w-full bg-ensena-primary/5">
-                <Image src={heroImage} alt="Student learning" fill className="object-cover" />
+                <Image src={heroImage} alt="Student learning" fill sizes="(min-width: 640px) 336px, 100vw" className="object-cover" />
               </div>
               <div className="p-5 text-center">
                 <p className="font-heading text-lg font-semibold text-ensena-ink">I want to learn</p>
@@ -115,7 +115,7 @@ export function SignUpChooserClient() {
 
             <div className="flex flex-col overflow-hidden rounded-2xl border border-ensena-border bg-ensena-surface">
               <div className="relative aspect-[4/3] w-full bg-violet-50">
-                <Image src="/teacher-3.jpg.png" alt="Tutor teaching" fill className="object-cover" />
+                <Image src="/teacher-3.jpg.png" alt="Tutor teaching" fill sizes="(min-width: 640px) 336px, 100vw" className="object-cover" />
               </div>
               <div className="p-5 text-center">
                 <p className="font-heading text-lg font-semibold text-ensena-ink">I want to teach</p>

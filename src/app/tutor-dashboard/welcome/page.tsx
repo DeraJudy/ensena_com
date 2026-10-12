@@ -46,7 +46,7 @@ export default function TutorWelcomePage() {
               <HelpCircle className="size-4" /> Need Help?
             </span>
             <div className="relative size-9 overflow-hidden rounded-full">
-              <Image src={dashboardTutor.image} alt={dashboardTutor.name} fill className="object-cover" />
+              <Image src={dashboardTutor.image} alt={dashboardTutor.name} fill sizes="36px" className="object-cover" />
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function TutorWelcomePage() {
                 <BarChart3 className="size-5" />
               </span>
               <div className="relative size-56 overflow-hidden rounded-full ring-4 ring-white">
-                <Image src={dashboardTutor.image} alt={dashboardTutor.name} fill className="object-cover" />
+                <Image src={dashboardTutor.image} alt={dashboardTutor.name} fill sizes="224px" className="object-cover" />
               </div>
             </div>
             <div className="mt-5 flex items-center gap-2 rounded-xl border border-ensena-border px-4 py-2">

@@ -60,7 +60,7 @@ export function GuardianDashboardSidebar() {
 
         <div className="mx-4 flex items-center gap-3 rounded-2xl bg-ensena-bg-soft p-3">
           <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ensena-primary/10 text-sm font-semibold text-ensena-primary">
-            {me.image ? <Image src={me.image} alt={me.name} fill className="object-cover" /> : initialsOf(me.name)}
+            {me.image ? <Image src={me.image} alt={me.name} fill sizes="40px" className="object-cover" /> : initialsOf(me.name)}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-ensena-ink">{me.name}</p>

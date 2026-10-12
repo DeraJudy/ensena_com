@@ -206,7 +206,7 @@ export function StudentProfileReal({ reviews }: { reviews: StudentReview[] }) {
           <div className="flex items-center gap-4">
             <div className="relative size-20 shrink-0">
               <div className="relative size-20 overflow-hidden rounded-full bg-ensena-bg-soft">
-                <Image src={photo} alt={me.name} fill className="object-cover" />
+                <Image src={photo} alt={me.name} fill sizes="80px" className="object-cover" />
               </div>
               <button
                 type="button"
@@ -297,7 +297,7 @@ export function StudentProfileReal({ reviews }: { reviews: StudentReview[] }) {
                   <div className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2">
                       <span className="relative flex size-8 items-center justify-center overflow-hidden rounded-full bg-ensena-primary/10 text-xs font-semibold text-ensena-primary">
-                        {r.reviewerImage ? <Image src={r.reviewerImage} alt={r.reviewerName} fill className="object-cover" /> : r.reviewerName[0]}
+                        {r.reviewerImage ? <Image src={r.reviewerImage} alt={r.reviewerName} fill sizes="32px" className="object-cover" /> : r.reviewerName[0]}
                       </span>
                       <span className="text-sm font-semibold text-ensena-ink">{r.reviewerName}</span>
                     </span>

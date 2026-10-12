@@ -172,7 +172,7 @@ export function AdminPromotionsClient() {
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {featuredTutorSlots.map((t) => (
             <div key={t.id} className="flex items-center gap-3 rounded-2xl border border-ensena-border bg-ensena-surface p-4">
-              <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill className="object-cover" /></div>
+              <div className="relative size-12 shrink-0 overflow-hidden rounded-full"><Image src={t.image} alt={t.name} fill sizes="48px" className="object-cover" /></div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ensena-ink">{t.name}</p>
                 <p className="truncate text-xs text-ensena-muted">{t.subject}</p>
