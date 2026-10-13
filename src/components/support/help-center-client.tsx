@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Flag, LifeBuoy, Mail, Search, Send } from "lucide-react";
+import { BookOpen, ChevronDown, Flag, LifeBuoy, Mail, MessageCircle, Search, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { HelpArticle } from "@/lib/help-articles-data";
+import { openBenny } from "@/lib/benny";
 import { SUPPORT_EMAIL } from "@/lib/support-data";
 import type { FaqItem } from "@/lib/tutor-dashboard-data";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export function HelpCenterClient({
   highlightContext,
   highlightLabel,
   onClearHighlight,
+  liveChat = true,
 }: {
   faqItems: FaqItem[];
   knowledgeBaseTitle: string;
@@ -47,6 +49,8 @@ export function HelpCenterClient({
   highlightContext?: string;
   highlightLabel?: string;
   onClearHighlight?: () => void;
+  /** Show the "Chat with Benny" card (off for the staff-only Admin Help Center). */
+  liveChat?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -127,6 +131,18 @@ export function HelpCenterClient({
         </div>
 
         <div className="flex flex-col gap-5">
+          {liveChat && (
+            <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
+              <h2 className="flex items-center gap-2 font-heading text-sm font-semibold text-ensena-ink">
+                <MessageCircle className="size-4 text-ensena-primary" /> Live Chat with Benny
+              </h2>
+              <p className="mt-1 text-xs text-ensena-muted">Send us a message and our support team replies right in the chat. You&apos;ll be notified if you&apos;ve left.</p>
+              <Button onClick={openBenny} className="mt-2.5 h-9 w-full rounded-full bg-ensena-primary text-xs font-semibold text-white hover:bg-ensena-primary-hover">
+                Chat with Benny
+              </Button>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-ensena-border bg-ensena-surface p-5">
             <h2 className="flex items-center gap-2 font-heading text-sm font-semibold text-ensena-ink">
               <LifeBuoy className="size-4 text-ensena-primary" /> Submit a Ticket

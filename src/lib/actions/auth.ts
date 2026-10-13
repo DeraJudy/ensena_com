@@ -2,12 +2,14 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { recordSignIn } from "@/lib/account-settings";
 import { getSupabaseServerClient as getSupabaseServiceRoleClient } from "@/lib/supabase";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { dashboardHrefByRole, type AppRole } from "@/lib/supabase/require-role";
-import { guardianConsentEmail, isResendConfigured, sendEmail } from "@/lib/resend";
+import { guardianConsentEmail, isResendConfigured, passwordResetEmail, sendEmail } from "@/lib/resend";
+import { notifyUser } from "@/lib/notifications";
 import { safeRedirectPath } from "@/lib/utils";
 
 export interface SignInState {
@@ -326,4 +328,105 @@ export async function saveTutorPhoto(input: { userId?: string; path: string }): 
   const { data } = admin.storage.from("avatars").getPublicUrl(input.path);
   const { error } = await admin.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", id);
   return error ? { status: "error", message: "We couldn't save your photo." } : { status: "ok" };
+}
+
+// ── Forgot password ────────────────────────────────────────────────────
+
+const RESET_FROM = process.env.RESEND_PASSWORD_RESET_FROM || "Ensena <noreply@ensena.co>";
+const RESET_COOLDOWN_MS = 60_000;
+
+export interface PasswordResetState {
+  status: "ok" | "error";
+  message?: string;
+}
+
+// Looks the email up in our own profiles table and, when it belongs to an
+// account, has Supabase create a one-time recovery token (generateLink
+// sends nothing itself), then emails the link through Resend from
+// noreply@ensena.co. The link goes to /auth/callback, which verifies the
+// token and signs the person into a recovery session on /reset-password.
+// Answers straight away and does the lookup + email after the response
+// (next/server's after()), so the "Check your email" screen appears
+// instantly, and the response is the same whether or not the email has an
+// account, so this can't be used to find out who's registered. Every
+// outcome is logged as [password-reset] in the server log.
+export async function requestPasswordReset(rawEmail: string): Promise<PasswordResetState> {
+  const email = rawEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { status: "error", message: "Please enter a valid email address." };
+  if (!isResendConfigured()) return { status: "error", message: "Password reset emails aren't available right now. Please contact support@ensena.co." };
+
+  const origin = await requestOrigin();
+  after(async () => {
+    try {
+      const outcome = await sendPasswordResetEmail(email, origin);
+      console.info(`[password-reset] ${maskEmail(email)}: ${outcome}`);
+    } catch (err) {
+      console.error(`[password-reset] ${maskEmail(email)}: failed`, err);
+    }
+  });
+  return { status: "ok" };
+}
+
+function maskEmail(email: string): string {
+  return email.replace(/^(.{2}).*(@.*)$/, "$1***$2");
+}
+
+async function sendPasswordResetEmail(email: string, origin: string): Promise<string> {
+  const admin = getSupabaseServiceRoleClient();
+  // Case-insensitive match (ilike with wildcards escaped), in case an
+  // address was stored with capitals.
+  const pattern = email.replace(/[\\%_]/g, (c) => "\\" + c);
+  const { data: matches } = await admin.from("profiles").select("id, full_name, email").ilike("email", pattern).limit(2);
+  const profile = (matches ?? []).find((p) => (p.email ?? "").toLowerCase() === email);
+  if (!profile) return "no account with this email, nothing sent";
+
+  // One email a minute per account, so the button can't be used to flood an inbox.
+  const { data: existing } = await admin.auth.admin.getUserById(profile.id);
+  if (!existing?.user) return "no sign-in for this profile, nothing sent";
+  const lastSent = Number(existing.user.app_metadata?.password_reset_sent_at ?? 0);
+  if (Date.now() - lastSent < RESET_COOLDOWN_MS) return "already sent in the last minute, skipped";
+
+  const { data: link, error: linkError } = await admin.auth.admin.generateLink({ type: "recovery", email });
+  if (linkError || !link.properties?.hashed_token) return `Supabase couldn't create the link: ${linkError?.message ?? "no token"}`;
+
+  const resetUrl = `${origin}/auth/callback?${new URLSearchParams({
+    token_hash: link.properties.hashed_token,
+    type: "recovery",
+    next: "/reset-password",
+  })}`;
+
+  const sent = await sendEmail({ to: email, from: RESET_FROM, ...passwordResetEmail({ name: profile.full_name ?? "", link: resetUrl }) });
+  if (!sent.ok) return `Resend rejected the email: ${sent.error}`;
+
+  await admin.auth.admin.updateUserById(profile.id, { app_metadata: { ...existing.user.app_metadata, password_reset_sent_at: Date.now() } });
+  return `sent (Resend id ${sent.id})`;
+}
+
+// Called by /reset-password right after the new password is saved (while
+// the recovery session is still valid): sends a security notice, then ends
+// every session, including this one, so they sign in fresh everywhere.
+export async function finishPasswordReset(): Promise<{ ok: boolean }> {
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false };
+  try {
+    await notifyUser(
+      user.id,
+      {
+        category: "security",
+        title: "Your Ensena password was changed",
+        body: "The password for your Ensena account was just changed. If this was you, there's nothing else to do.",
+        details: ["If you didn't change it, reset your password again straight away and contact support@ensena.co."],
+        url: "/forgot-password",
+        ctaLabel: "Reset password",
+      },
+      { security: true }
+    );
+  } catch (err) {
+    console.error("[finishPasswordReset] notice failed:", err);
+  }
+  await supabase.auth.signOut({ scope: "global" });
+  return { ok: true };
 }

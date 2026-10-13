@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   Calendar,
+  Clock,
+  CheckCircle2,
   Eye,
   EyeOff,
   Lock,
@@ -67,6 +69,12 @@ export function SignInClient() {
   const callbackErrorParam = searchParams.get("error");
   const authCallbackError = callbackErrorParam === "auth-failed" ? "That link didn't work or has expired. Please try again." : null;
   const noAccountError = callbackErrorParam === "no-account";
+  const notice =
+    searchParams.get("reason") === "idle"
+      ? { icon: Clock, text: "You were logged out after 15 minutes of inactivity. Please log in again." }
+      : searchParams.get("reset") === "1"
+        ? { icon: CheckCircle2, text: "Your password was changed. Log in with your new password." }
+        : null;
   useErrorToast(error ? errorMessages[error].message : authCallbackError ?? (noAccountError ? "There's no Ensena account for that Google email yet." : null));
 
   async function handleSubmit(e: React.FormEvent) {
@@ -75,6 +83,12 @@ export function SignInClient() {
     // Once a real Supabase project is configured, it's the only path — see
     // src/lib/supabase/env.ts. Until then, this falls through untouched to
     // the existing demo/platform-user check below.
+    try {
+      if (email.trim()) window.localStorage.setItem("ensena_last_email", email.trim());
+    } catch {
+      // Not remembered — fine.
+    }
+
     if (supabaseConfigured) {
       setError(null);
       setSupabaseError(null);
@@ -214,6 +228,11 @@ export function SignInClient() {
 
           <h2 className="font-heading text-2xl font-semibold text-ensena-ink">Welcome back</h2>
           <p className="mt-1 text-sm text-ensena-muted">Log in to your Ensena account</p>
+          {notice && (
+            <p role="status" className="mt-4 flex items-start gap-2 rounded-xl border border-ensena-border bg-ensena-bg-soft px-3.5 py-3 text-sm text-ensena-ink">
+              <notice.icon className="mt-0.5 size-4 shrink-0 text-ensena-primary" /> {notice.text}
+            </p>
+          )}
 
           <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
             <label className="flex flex-col gap-1.5">
@@ -292,7 +311,7 @@ export function SignInClient() {
                 <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="size-4 rounded border-ensena-border accent-ensena-primary" />
                 Remember me
               </label>
-              <Link href="/forgot-password" className="text-sm font-medium text-ensena-primary hover:underline">Forgot password?</Link>
+              <Link href={email.trim() ? `/forgot-password?email=${encodeURIComponent(email.trim())}` : "/forgot-password"} className="text-sm font-medium text-ensena-primary hover:underline">Forgot password?</Link>
             </div>
 
             <Button type="submit" loading={submitting} className="mt-1 h-12 w-full rounded-full bg-ensena-primary text-sm font-semibold text-white hover:bg-[var(--ensena-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60">

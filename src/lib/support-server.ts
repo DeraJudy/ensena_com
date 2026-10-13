@@ -253,3 +253,42 @@ export async function loadSupportDirectory(): Promise<SupportDirectoryEntry[]> {
     role: p.role === "tutor" ? "Tutor" : "Student",
   }));
 }
+
+// ── Benny live chat ────────────────────────────────────────────────────
+
+export interface BennyChatMessage {
+  id: string;
+  author: "user" | "staff";
+  authorName: string;
+  text: string;
+  atISO: string;
+  attachments?: SupportAttachment[];
+}
+
+export interface BennyChat {
+  code: string;
+  status: SupportStatus;
+  messages: BennyChatMessage[];
+}
+
+// The person's current live chat (the newest one that isn't closed), for
+// either a signed-in user or a guest's browser key. Never includes staff
+// internal notes.
+export async function loadBennyChat(owner: { requesterId: string } | { guestToken: string }): Promise<BennyChat | null> {
+  let query = getServiceRoleClient()
+    .from("support_requests")
+    .select(REQUEST_COLUMNS)
+    .eq("source", "Live Chat")
+    .neq("status", "Closed")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  query = "requesterId" in owner ? query.eq("requester_id", owner.requesterId) : query.eq("guest_token", owner.guestToken).is("requester_id", null);
+  const { data } = await query.maybeSingle();
+  if (!data) return null;
+  const request = await loadThread(data as RequestRow, false);
+  return {
+    code: request.id,
+    status: request.status,
+    messages: request.conversation.map((m) => ({ id: m.id, author: m.author, authorName: m.authorName, text: m.text, atISO: m.atISO, attachments: m.attachments })),
+  };
+}

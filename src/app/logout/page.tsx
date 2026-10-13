@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { LogoutClient } from "./logout-client";
 
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function LogoutPage() {
-  return <LogoutClient />;
+  return (
+    <Suspense fallback={null}>
+      <LogoutClient />
+    </Suspense>
+  );
 }

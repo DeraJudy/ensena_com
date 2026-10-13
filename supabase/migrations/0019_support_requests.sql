@@ -32,6 +32,9 @@ create table if not exists public.support_requests (
   related_record_type text,
   related_record_id text,
   related_record_label text,
+  -- Signed-out visitors using the Benny live chat: a random key kept in
+  -- their browser, so they can keep reading replies to their own chat.
+  guest_token uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   resolved_at timestamptz
@@ -39,6 +42,7 @@ create table if not exists public.support_requests (
 
 create index if not exists support_requests_requester_idx on public.support_requests (requester_id, created_at desc);
 create index if not exists support_requests_status_idx on public.support_requests (status, updated_at desc);
+create index if not exists support_requests_guest_token_idx on public.support_requests (guest_token) where guest_token is not null;
 
 create table if not exists public.support_messages (
   id uuid primary key default gen_random_uuid(),

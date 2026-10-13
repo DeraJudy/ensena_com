@@ -85,3 +85,44 @@ This link expires in 24 hours. If you didn't expect this email, you can ignore i
 
   return { subject, html, text };
 }
+
+export function passwordResetEmail(input: { name: string; link: string }): Omit<OutgoingEmail, "to"> {
+  const first = input.name.split(" ")[0] || "there";
+  const link = escapeHtml(input.link);
+  const subject = "Reset your Ensena password";
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f7f8fa;font-family:Arial,Helvetica,sans-serif;color:#1f2430;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f8fa;padding:32px 16px;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e7e8ec;border-radius:16px;padding:32px;">
+          <tr><td style="font-size:22px;font-weight:bold;color:#f80248;padding-bottom:24px;">ensena</td></tr>
+          <tr><td style="font-size:18px;font-weight:bold;padding-bottom:12px;">Hi ${escapeHtml(first)},</td></tr>
+          <tr><td style="font-size:15px;line-height:1.6;color:#4b5060;padding-bottom:24px;">
+            We got a request to reset the password for your Ensena account. Click the button below to choose a new one.
+          </td></tr>
+          <tr><td align="center" style="padding-bottom:24px;">
+            <a href="${link}" style="display:inline-block;background:#f80248;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 28px;border-radius:999px;">Reset password</a>
+          </td></tr>
+          <tr><td style="font-size:13px;line-height:1.6;color:#4b5060;padding-bottom:16px;">
+            Or paste this link into your browser:<br /><a href="${link}" style="color:#f80248;word-break:break-all;">${link}</a>
+          </td></tr>
+          <tr><td style="font-size:12px;line-height:1.6;color:#8a8f9c;">
+            This link expires in 1 hour and can only be used once. If you didn't ask to reset your password, you can ignore this email and your password won't change. Ensena will never ask for your password by email.
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+
+  const text = `Hi ${first},
+
+We got a request to reset the password for your Ensena account. Open this link to choose a new one:
+${input.link}
+
+This link expires in 1 hour and can only be used once. If you didn't ask to reset your password, you can ignore this email and your password won't change.`;
+
+  return { subject, html, text };
+}

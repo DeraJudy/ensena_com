@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,6 +18,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 // /sign-in with a confirmation toast.
 export function LogoutClient() {
   const router = useRouter();
+  // "idle" = sent here by IdleSessionGuard after 15 minutes of inactivity.
+  const idle = useSearchParams().get("reason") === "idle";
   const started = useRef(false);
 
   useEffect(() => {
@@ -38,12 +40,13 @@ export function LogoutClient() {
       } catch {
         // Storage blocked — nothing stored to clear.
       }
-      if (ok) toast.success("You've been logged out.");
-      else toast.error("We couldn't fully log you out. Please close your browser to be safe.");
-      router.replace("/sign-in");
+      if (!ok) toast.error("We couldn't fully log you out. Please close your browser to be safe.");
+      else if (idle) toast.info("You were logged out after 15 minutes of inactivity.");
+      else toast.success("You've been logged out.");
+      router.replace(idle ? "/sign-in?reason=idle" : "/sign-in");
       router.refresh();
     })();
-  }, [router]);
+  }, [router, idle]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-ensena-bg-soft px-6">

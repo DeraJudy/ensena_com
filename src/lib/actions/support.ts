@@ -19,7 +19,7 @@ import {
   type SupportUserRole,
   type StoredAttachment,
 } from "@/lib/support-data";
-import { SUPPORT_BUCKET } from "@/lib/support-server";
+import { loadBennyChat, SUPPORT_BUCKET, type BennyChat } from "@/lib/support-server";
 
 // Every support write goes through here, using the service-role client only
 // after working out who the caller is: a requester can open tickets and
@@ -272,11 +272,11 @@ async function requireAdmin(): Promise<Caller | null> {
 async function loadForAdmin(code: string) {
   const { data } = await getServiceRoleClient()
     .from("support_requests")
-    .select("id, code, status, priority, subject, assigned_to, assigned_name, requester_id, requester_email, requester_name, requester_role")
+    .select("id, code, status, priority, subject, source, assigned_to, assigned_name, requester_id, requester_email, requester_name, requester_role")
     .eq("code", code.toUpperCase())
     .maybeSingle();
   return data as
-    | { id: string; code: string; status: SupportStatus; priority: SupportPriority; subject: string; assigned_to: string | null; assigned_name: string | null; requester_id: string | null; requester_email: string | null; requester_name: string; requester_role: SupportUserRole }
+    | { id: string; code: string; status: SupportStatus; priority: SupportPriority; subject: string; source: SupportSource; assigned_to: string | null; assigned_name: string | null; requester_id: string | null; requester_email: string | null; requester_name: string; requester_role: SupportUserRole }
     | null;
 }
 
@@ -301,7 +301,14 @@ export async function staffReplyToSupportRequest(code: string, text: string, opt
   }
   await admin.from("support_requests").update(patch).eq("id", request.id);
   await logActivity(request.id, me.name, opts.internal ? `${me.name} added an internal note` : `${me.name} sent a reply`);
-  if (!opts.internal) {
+  // In a live chat the person usually sees the reply in the widget, so only
+  // notify them if they've gone quiet for 10 minutes (they've probably left).
+  let notifyRequester = !opts.internal;
+  if (notifyRequester && request.source === "Live Chat") {
+    const { data: lastFromUser } = await admin.from("support_messages").select("created_at").eq("request_id", request.id).eq("author", "user").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    notifyRequester = !lastFromUser || Date.now() - new Date(lastFromUser.created_at).getTime() > 10 * 60_000;
+  }
+  if (notifyRequester) {
     await tellRequester(request, `Ensena Support replied to ${request.code}`, `${me.name} from Ensena Support replied to your request "${request.subject}": ${body.slice(0, 400)}${body.length > 400 ? "…" : ""}`);
   }
   refresh();
@@ -449,4 +456,106 @@ export async function fileManualSupportTicket(input: ManualTicketInput): Promise
   if (assignee) await logActivity(created.id, me.name, `Assigned to ${assignee.name}`);
   refresh();
   return { ok: true, id: code };
+}
+
+// ── Benny live chat ────────────────────────────────────────────────────
+// Benny is the chat bubble on the site. Each conversation is a support
+// request with source "Live Chat", so the team answers it from the same
+// Admin → Support inbox, and the widget polls for their replies.
+
+const MAX_CHAT_MESSAGE = 2000;
+
+export async function fetchBennyChat(guestToken?: string): Promise<{ signedIn: boolean; name?: string; chat: BennyChat | null }> {
+  const caller = await currentCaller();
+  if (caller) return { signedIn: true, name: caller.name, chat: await loadBennyChat({ requesterId: caller.id }) };
+  if (guestToken && UUID.test(guestToken)) return { signedIn: false, chat: await loadBennyChat({ guestToken }) };
+  return { signedIn: false, chat: null };
+}
+
+export interface BennyMessageInput {
+  text: string;
+  attachments?: StoredAttachment[];
+  /** Signed-out visitors: their browser key, plus name/email for the first message. */
+  guestToken?: string;
+  guestName?: string;
+  guestEmail?: string;
+  /** Page they were on, so the team has context. */
+  page?: string;
+}
+
+export async function sendBennyMessage(input: BennyMessageInput): Promise<Result<{ chat: BennyChat | null }>> {
+  const caller = await currentCaller();
+  const text = clean(input.text, MAX_CHAT_MESSAGE);
+  if (!text && !input.attachments?.length) return { ok: false, message: "Type a message first." };
+
+  const guestToken = !caller && input.guestToken && UUID.test(input.guestToken) ? input.guestToken : null;
+  if (!caller && !guestToken) return { ok: false, message: "Please refresh the page and try again." };
+  const owner = caller ? caller.id : `guest/${guestToken}`;
+  const checked = await checkAttachments(input.attachments, owner);
+  if (!checked.ok) return checked;
+
+  const admin = getServiceRoleClient();
+  let query = admin
+    .from("support_requests")
+    .select("id, code, status, requester_name, updated_at")
+    .eq("source", "Live Chat")
+    .neq("status", "Closed")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  query = caller ? query.eq("requester_id", caller.id) : query.eq("guest_token", guestToken!).is("requester_id", null);
+  const { data: active } = await query.maybeSingle();
+
+  if (active) {
+    // Slow down anyone sending faster than a person types.
+    const { data: last } = await admin.from("support_messages").select("created_at").eq("request_id", active.id).eq("author", "user").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (last && Date.now() - new Date(last.created_at).getTime() < 1_000) return { ok: false, message: "You're sending messages too quickly. Please wait a moment." };
+
+    const nextStatus: SupportStatus = active.status === "Waiting for User" || active.status === "Resolved" ? "In Progress" : active.status;
+    await admin.from("support_messages").insert({ request_id: active.id, author: "user", author_id: caller?.id ?? null, author_name: caller?.name ?? active.requester_name, body: text, attachments: checked.files });
+    await admin.from("support_requests").update({ status: nextStatus, updated_at: new Date().toISOString(), resolved_at: nextStatus === "In Progress" ? null : undefined }).eq("id", active.id);
+    if (nextStatus !== active.status) await logActivity(active.id, caller?.name ?? active.requester_name, `Requester replied in live chat · status changed from ${active.status} to ${nextStatus}`);
+    refresh();
+    return { ok: true, chat: await loadBennyChat(caller ? { requesterId: caller.id } : { guestToken: guestToken! }) };
+  }
+
+  // First message: open a new live-chat request.
+  let requester: { id: string | null; name: string; email: string | null; role: SupportUserRole };
+  if (caller) {
+    requester = { id: caller.id, name: caller.name, email: caller.email || null, role: supportRoleOf(caller.role) };
+  } else {
+    const name = clean(input.guestName, 120);
+    const email = clean(input.guestEmail, 200).toLowerCase();
+    if (!name) return { ok: false, message: "Please tell us your name." };
+    if (!EMAIL.test(email)) return { ok: false, message: "Please enter a valid email so we can reply if you leave." };
+    requester = { id: null, name, email, role: "Guest" };
+  }
+  const context: SupportContext = requester.role === "Tutor" ? "tutor" : requester.role === "Student" ? "student" : requester.role === "Admin" ? "platform-staff" : "public";
+  const page = clean(input.page, 200);
+  const code = await newCode();
+  const { data: created, error } = await admin
+    .from("support_requests")
+    .insert({
+      code,
+      requester_id: requester.id,
+      requester_name: requester.name,
+      requester_email: requester.email,
+      requester_role: requester.role,
+      is_existing_user: requester.id ? true : null,
+      context,
+      category: "Live chat",
+      subject: (text || "Attachment").slice(0, 80) + ((text?.length ?? 0) > 80 ? "…" : ""),
+      message: text || "(attachment)",
+      source: "Live Chat",
+      priority: "Normal",
+      guest_token: requester.id ? null : guestToken,
+    })
+    .select("id")
+    .single();
+  if (error || !created) return { ok: false, message: "We couldn't start the chat. Please try again." };
+
+  await admin.from("support_messages").insert({ request_id: created.id, author: "user", author_id: requester.id, author_name: requester.name, body: text, attachments: checked.files });
+  await logActivity(created.id, requester.name, `Live chat started${page ? ` on ${page}` : ""}`);
+  await alertSupportInbox(code, `Live chat: ${text.slice(0, 80) || "attachment"}`, requester.name, requester.role, text);
+  refresh();
+  return { ok: true, chat: await loadBennyChat(caller ? { requesterId: caller.id } : { guestToken: guestToken! }) };
 }

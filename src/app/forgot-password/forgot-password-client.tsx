@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, KeyRound, Mail, MailCheck, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/logo";
 import { AuthSidePanel } from "@/components/auth/auth-side-panel";
 import { demoAccounts } from "@/lib/demo-auth";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { requestPasswordReset } from "@/lib/actions/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { useErrorToast } from "@/hooks/use-error-toast";
 
@@ -20,8 +21,26 @@ const bullets = [
   { icon: KeyRound, title: "Quick and simple", description: "We'll send you a link to create a new password." },
 ];
 
+// Remembered from the sign-in form so the address is already filled in here.
+const LAST_EMAIL_KEY = "ensena_last_email";
+
+const noopSubscribe = () => () => {};
+function readLastEmail(): string {
+  try {
+    return window.localStorage.getItem(LAST_EMAIL_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export function ForgotPasswordClient() {
-  const [email, setEmail] = useState("");
+  // Pre-filled from ?email= (the sign-in form passes what was typed there),
+  // else the last email used on this device — read through
+  // useSyncExternalStore so server and browser render the same first.
+  const fromLink = useSearchParams().get("email") ?? "";
+  const remembered = useSyncExternalStore(noopSubscribe, readLastEmail, () => "");
+  const [typed, setEmail] = useState<string | null>(null);
+  const email = typed ?? (fromLink || remembered);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useErrorToast(error);
@@ -37,15 +56,23 @@ export function ForgotPasswordClient() {
 
     if (supabaseConfigured) {
       setSubmitting(true);
-      await getSupabaseBrowserClient().auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
-      });
+      // Our own reset email (Resend, noreply@ensena.co), not Supabase's
+      // built-in one. The server answers at once and sends in the background.
+      const result = await requestPasswordReset(email).catch(() => ({ status: "error" as const, message: "We couldn't reach Ensena. Check your connection and try again." }));
       setSubmitting(false);
+      if (result.status === "error") {
+        setError(result.message ?? "Something went wrong. Please try again.");
+        return;
+      }
+    }
+    try {
+      window.localStorage.setItem(LAST_EMAIL_KEY, email.trim());
+    } catch {
+      // Not remembered — fine.
     }
 
     // Always show the same "check your email" state whether or not the
-    // address has an account — resetPasswordForEmail never reveals which,
-    // and neither should this screen.
+    // address has an account, so this screen never reveals who has one.
     setSent(true);
   }
 
@@ -76,7 +103,7 @@ export function ForgotPasswordClient() {
                   <span className="text-sm font-medium text-ensena-ink">Email address</span>
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ensena-muted" />
-                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" className="h-11 rounded-xl border-ensena-border pl-9" />
+                    <Input type="email" autoComplete="email" autoFocus={!email} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" className="h-11 rounded-xl border-ensena-border pl-9" />
                   </div>
                 </label>
 
@@ -98,8 +125,9 @@ export function ForgotPasswordClient() {
               <span className="flex size-14 items-center justify-center rounded-full bg-ensena-success/10 text-ensena-success"><MailCheck className="size-7" /></span>
               <h2 className="mt-4 font-heading text-2xl font-semibold text-ensena-ink">Check your email</h2>
               <p className="mt-2 text-sm text-ensena-muted">
-                We&apos;ve sent password reset instructions to <span className="font-medium text-ensena-ink">{email}</span>.
+                If an Ensena account uses <span className="font-medium text-ensena-ink">{email}</span>, we&apos;ve sent it a link to reset your password. The link expires in 1 hour.
               </p>
+              <p className="mt-2 text-xs text-ensena-muted">Can&apos;t find it? Check your spam or promotions folder for an email from noreply@ensena.co.</p>
               {!supabaseConfigured && (
                 <Button
                   nativeButton={false}
@@ -112,6 +140,7 @@ export function ForgotPasswordClient() {
               <button type="button" onClick={() => setSent(false)} className="mt-4 text-sm font-medium text-ensena-primary hover:underline">
                 Didn&apos;t get it? Resend email
               </button>
+              <p className="mt-1 text-[11px] text-ensena-muted">You can request a new email once a minute.</p>
             </div>
           )}
         </div>

@@ -41,6 +41,7 @@ export function AdminHelpCenterClient() {
       contactSupportHref={buildSupportHref({ role: "Admin", context: "platform-staff", category: presetCategory })}
       reportIssueHref={buildSupportHref({ role: "Admin", context: "platform-staff", category: "System / technical issue", source: "Report" })}
       viewRequestsHref="/admin/support?tab=My Requests"
+      liveChat={false}
     />
   );
 }

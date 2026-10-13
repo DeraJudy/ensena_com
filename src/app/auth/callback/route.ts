@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
     // device/browser than the one that signed up (no PKCE verifier needed)
     // — used when the Supabase email template links here with token_hash.
     const { error } = await supabase.auth.verifyOtp({ type: otpType, token_hash: tokenHash });
+    // An old or already-used password reset link gets its own "request a new link" screen.
+    if (error && otpType === "recovery") return NextResponse.redirect(`${origin}/reset-password?expired=true`);
     if (error) return NextResponse.redirect(`${origin}/sign-in?error=auth-failed`);
   } else {
     return NextResponse.redirect(`${origin}/sign-in?error=auth-failed`);

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
+import { BennyChat } from "@/components/support/benny-chat";
+import { IdleSessionGuard } from "@/components/shared/idle-session-guard";
 import { RouteProgressBar } from "@/components/shared/route-progress-bar";
 import { ThemeSync } from "@/components/shared/theme-sync";
 import { themeInitScript } from "@/lib/theme";
@@ -84,6 +86,8 @@ export default function RootLayout({
         <RouteProgressBar />
         <PageViewTracker />
         {children}
+        <BennyChat />
+        <IdleSessionGuard />
         <Toaster />
       </body>
     </html>

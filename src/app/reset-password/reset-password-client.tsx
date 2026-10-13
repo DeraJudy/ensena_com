@@ -8,6 +8,7 @@ import { AlertTriangle, Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/logo";
+import { finishPasswordReset } from "@/lib/actions/auth";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { useErrorToast } from "@/hooks/use-error-toast";
@@ -25,6 +26,10 @@ export function ResetPasswordClient() {
   useErrorToast(error);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Accounts with two-step verification must enter an authenticator code
+  // before Supabase lets a recovery session change the password.
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState("");
 
   // This page is only ever reached with a live recovery session, put there
   // by /auth/callback exchanging the reset-link's code. Someone opening the
@@ -52,16 +57,40 @@ export function ResetPasswordClient() {
 
     if (supabaseConfigured) {
       setSubmitting(true);
-      const { error: updateError } = await getSupabaseBrowserClient().auth.updateUser({ password });
-      setSubmitting(false);
+      const supabase = getSupabaseBrowserClient();
+      if (needsCode) {
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        const totp = factors?.totp?.[0];
+        const verified = totp ? await supabase.auth.mfa.challengeAndVerify({ factorId: totp.id, code: code.trim() }) : null;
+        if (!verified || verified.error) {
+          setSubmitting(false);
+          setError("That code didn't work. Enter the current 6-digit code from your authenticator app.");
+          return;
+        }
+      }
+      const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
-        setError("Something went wrong updating your password. Please try again.");
+        setSubmitting(false);
+        if (updateError.code === "insufficient_aal" || /aal2/i.test(updateError.message)) {
+          setNeedsCode(true);
+          setError("Your account uses two-step verification. Enter the 6-digit code from your authenticator app to continue.");
+        } else if (updateError.code === "same_password") {
+          setError("Your new password must be different from your old one.");
+        } else if (updateError.code === "weak_password") {
+          setError(updateError.message || "That password is too weak. Try a longer one.");
+        } else {
+          setError("Something went wrong updating your password. Please try again.");
+        }
         return;
       }
+      // Security email + sign out everywhere, so the new password is needed to get back in.
+      await finishPasswordReset();
+      await supabase.auth.signOut({ scope: "local" });
+      setSubmitting(false);
     }
 
     setDone(true);
-    setTimeout(() => router.push("/sign-in"), 1800);
+    setTimeout(() => router.push("/sign-in?reset=1"), 1800);
   }
 
   return (
@@ -84,7 +113,7 @@ export function ResetPasswordClient() {
           <div className="flex flex-col items-center text-center">
             <span className="flex size-14 items-center justify-center rounded-full bg-ensena-success/10 text-ensena-success"><Check className="size-7" /></span>
             <h1 className="mt-4 font-heading text-xl font-semibold text-ensena-ink">Password updated</h1>
-            <p className="mt-2 text-sm text-ensena-muted">Redirecting you to log in…</p>
+            <p className="mt-2 text-sm text-ensena-muted">You&apos;ve been signed out everywhere. Redirecting you to log in with your new password…</p>
           </div>
         ) : (
           <>
@@ -101,6 +130,12 @@ export function ResetPasswordClient() {
                 <span className="text-sm font-medium text-ensena-ink">Confirm new password</span>
                 <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter new password" className="h-11 rounded-xl border-ensena-border" />
               </label>
+              {needsCode && (
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-ensena-ink">Authenticator code</span>
+                  <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit code" className="h-11 rounded-xl border-ensena-border tracking-widest" />
+                </label>
+              )}
               {error && <p className="text-sm text-rose-600">{error}</p>}
               <Button type="submit" loading={submitting} className="mt-1 h-12 w-full rounded-full bg-ensena-primary text-sm font-semibold text-white hover:bg-[var(--ensena-primary-hover)]">
                 Update Password
